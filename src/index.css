@@ -1,0 +1,143 @@
+@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800;900&family=Quicksand:wght@500;600;700&family=Outfit:wght@800;900&display=swap');
+
+:root {
+  /* Cute & Modern Palette */
+  --bg-dark: #0f111a;
+  --card-bg: rgba(30, 35, 55, 0.7);
+  --primary-neon: #00f2ff;
+  --primary-neon-h: 183;
+  --primary-neon-s: 100%;
+  --secondary-neon: #bd00ff;
+  --secondary-neon-h: 284;
+  --secondary-neon-s: 100%;
+  --accent-cute: #ff8ab4;
+  --text-main: #ffffff;
+  --text-dim: #94a3b8;
+  --success: #10b981;
+  --error: #ef4444;
+
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+
+  --font-main: 'Be Vietnam Pro', sans-serif;
+  --font-cute: 'Quicksand', sans-serif;
+  --font-heading: 'Outfit', sans-serif;
+
+  --safe-top: env(safe-area-inset-top);
+  --safe-bottom: env(safe-area-inset-bottom);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  background: var(--bg-dark);
+  background-image:
+    radial-gradient(at 0% 0%, hsla(var(--primary-neon-h), var(--primary-neon-s), 20%, 0.1) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, hsla(var(--secondary-neon-h), var(--secondary-neon-s), 20%, 0.1) 0px, transparent 50%);
+  color: var(--text-main);
+  font-family: var(--font-main);
+  min-height: 100vh;
+  line-height: 1.5;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+.heading-font {
+  font-family: var(--font-heading);
+  letter-spacing: -0.03em;
+}
+
+.container {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: calc(2rem + var(--safe-top)) 1.25rem calc(5rem + var(--safe-bottom));
+}
+
+.glass-card {
+  background: var(--card-bg);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border-radius: 28px;
+  /* Extra rounded for cuteness */
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.neon-text {
+  background: linear-gradient(135deg, var(--primary-neon), var(--secondary-neon));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 4px 12px hsla(var(--primary-neon-h), 100%, 50%, 0.2));
+}
+
+.neon-btn {
+  background: linear-gradient(135deg, var(--primary-neon), var(--secondary-neon));
+  border: none;
+  color: #000;
+  padding: 1rem 2rem;
+  border-radius: 20px;
+  font-weight: 800;
+  font-family: var(--font-cute);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 8px 15px rgba(0, 242, 255, 0.2);
+}
+
+.neon-btn:hover {
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 12px 20px rgba(0, 242, 255, 0.3);
+}
+
+input,
+select {
+  font-family: var(--font-main);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--glass-border);
+  border-radius: 18px;
+  color: white;
+  padding: 1rem 1.25rem;
+  width: 100%;
+  transition: all 0.3s ease;
+}
+
+input:focus,
+select:focus {
+  outline: none;
+  border-color: var(--primary-neon);
+  background: rgba(255, 255, 255, 0.07);
+  box-shadow: 0 0 0 4px rgba(0, 242, 255, 0.1);
+}
+
+/* Animations */
+@keyframes bouncyFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.fade-in {
+  animation: bouncyFadeIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* Mobile Adjustments */
+@media (max-width: 600px) {
+  .container {
+    padding: calc(1rem + var(--safe-top)) 1rem calc(6rem + var(--safe-bottom));
+  }
+}
