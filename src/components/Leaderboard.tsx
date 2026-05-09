@@ -87,11 +87,10 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ onViewProfile }) => {
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ delay: index * 0.05 }}
-                        className="glass-card hover-row"
+                        className="leaderboard-grid-row glass-card hover-row"
                         style={{
                             padding: '20px 24px',
                             display: 'grid',
-                            gridTemplateColumns: '60px 1fr 100px 140px 80px',
                             alignItems: 'center',
                             background: index < 3 ? 'hsla(var(--primary-neon-h), 100%, 50%, 0.03)' : 'transparent',
                             borderRadius: '24px',
@@ -105,7 +104,7 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ onViewProfile }) => {
                         </div>
 
                         <div style={{ display: 'flex', alignItems: 'center', gap: '16px', minWidth: 0 }}>
-                            <div style={{
+                            <div className="player-avatar" style={{
                                 width: '48px',
                                 height: '48px',
                                 flexShrink: 0,
@@ -117,11 +116,11 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ onViewProfile }) => {
                             }}>
                                 <User size={24} color="var(--primary-neon)" />
                             </div>
-                            <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                                     <span style={{ fontWeight: 800, fontSize: '1.15rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{player.name}</span>
                                     {player.user_ad && (
-                                        <span style={{ fontSize: '0.75rem', color: 'var(--primary-neon)', background: 'rgba(0, 242, 255, 0.1)', padding: '2px 8px', borderRadius: '10px', fontWeight: 700 }}>
+                                        <span style={{ fontSize: '0.7rem', color: 'var(--primary-neon)', background: 'rgba(0, 242, 255, 0.1)', padding: '2px 6px', borderRadius: '8px', fontWeight: 700 }}>
                                             @{player.user_ad}
                                         </span>
                                     )}
@@ -138,10 +137,10 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ onViewProfile }) => {
                             <div style={{ color: 'var(--primary-neon)', fontWeight: 900, fontSize: '1.4rem', fontFamily: 'var(--font-heading)' }}>
                                 {player.elo_rating}
                             </div>
-                            <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', fontWeight: 700, textTransform: 'uppercase' }}>Elo Rating</div>
+                            <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', fontWeight: 700, textTransform: 'uppercase' }}>Elo</div>
                         </div>
 
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '20px', textAlign: 'right' }}>
+                        <div className="hide-mobile" style={{ display: 'flex', justifyContent: 'flex-end', gap: '20px', textAlign: 'right' }}>
                             <div>
                                 <div style={{ fontWeight: 800, fontSize: '1rem' }}>{player.matches_played || 0}</div>
                                 <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', fontWeight: 600 }}>Trận</div>
@@ -166,8 +165,6 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ onViewProfile }) => {
                                     cursor: 'pointer',
                                     transition: 'all 0.3s'
                                 }}
-                                onMouseOver={e => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
-                                onMouseOut={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
                             >
                                 <BarChart2 size={20} color="var(--primary-neon)" />
                             </button>
@@ -177,11 +174,17 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ onViewProfile }) => {
             </div>
 
             <style>{`
-        @media (max-width: 600px) {
-          .glass-card { 
-            grid-template-columns: 40px 1fr 80px 40px !important;
+        .leaderboard-grid-row {
+          grid-template-columns: 50px 1fr 80px 140px 60px;
+        }
+        @media (max-width: 768px) {
+          .leaderboard-grid-row { 
+            grid-template-columns: 40px 1fr 70px 50px !important;
+            padding: 12px 16px !important;
+            gap: 8px !important;
           }
-          div:nth-child(4) { display: none !important; }
+          .hide-mobile { display: none !important; }
+          .player-avatar { display: none !important; }
         }
       `}</style>
         </div>

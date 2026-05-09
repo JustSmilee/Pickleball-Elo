@@ -145,16 +145,16 @@ export const History: React.FC<HistoryProps> = ({ onEdit }) => {
                                     <Clock size={14} /> {formatRelativeTime(match.created_at)}
                                 </div>
 
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: '24px' }}>
+                                <div className="match-grid" style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: '24px' }}>
                                     <div style={{ textAlign: 'right' }}>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                            <div style={{ fontWeight: 900, fontSize: '1.5rem', color: match.team1_score > match.team2_score ? 'var(--primary-neon)' : 'white', lineHeight: 1 }}>
+                                            <div className="player-name" style={{ fontWeight: 900, fontSize: '1.5rem', color: match.team1_score > match.team2_score ? 'var(--primary-neon)' : 'white', lineHeight: 1 }}>
                                                 {match.p1?.name}
                                             </div>
                                             {match.p1b && (
                                                 <>
                                                     <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', fontWeight: 800, margin: '-2px 0' }}>&</div>
-                                                    <div style={{ fontWeight: 900, fontSize: '1.5rem', color: match.team1_score > match.team2_score ? 'var(--primary-neon)' : 'white', lineHeight: 1 }}>
+                                                    <div className="player-name" style={{ fontWeight: 900, fontSize: '1.5rem', color: match.team1_score > match.team2_score ? 'var(--primary-neon)' : 'white', lineHeight: 1 }}>
                                                         {match.p1b.name}
                                                     </div>
                                                 </>
@@ -167,26 +167,26 @@ export const History: React.FC<HistoryProps> = ({ onEdit }) => {
                                     </div>
 
                                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-                                        <div style={{
+                                        <div className="score-box" style={{
                                             padding: '14px 28px', borderRadius: '22px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--glass-border)',
                                             fontFamily: 'var(--font-heading)', fontSize: '1.8rem', fontWeight: 900, letterSpacing: '0.05em', color: 'white'
                                         }}>
                                             {match.team1_score} - {match.team2_score}
                                         </div>
                                         <div style={{ fontSize: '0.65rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(255,255,255,0.05)', padding: '4px 10px', borderRadius: '10px' }}>
-                                            {match.type === 'doubles' ? <Users size={12} /> : <User size={12} />} {match.type === 'doubles' ? 'Trận Đôi' : 'Trận Đơn'}
+                                            {match.type === 'doubles' ? <Users size={12} /> : <User size={12} />} {match.type === 'doubles' ? 'Đôi' : 'Đơn'}
                                         </div>
                                     </div>
 
                                     <div style={{ textAlign: 'left' }}>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                            <div style={{ fontWeight: 900, fontSize: '1.5rem', color: match.team2_score > match.team1_score ? 'var(--secondary-neon)' : 'white', lineHeight: 1 }}>
+                                            <div className="player-name" style={{ fontWeight: 900, fontSize: '1.5rem', color: match.team2_score > match.team1_score ? 'var(--secondary-neon)' : 'white', lineHeight: 1 }}>
                                                 {match.p2?.name}
                                             </div>
                                             {match.p2b && (
                                                 <>
                                                     <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', fontWeight: 800, margin: '-2px 0' }}>&</div>
-                                                    <div style={{ fontWeight: 900, fontSize: '1.5rem', color: match.team2_score > match.team1_score ? 'var(--secondary-neon)' : 'white', lineHeight: 1 }}>
+                                                    <div className="player-name" style={{ fontWeight: 900, fontSize: '1.5rem', color: match.team2_score > match.team1_score ? 'var(--secondary-neon)' : 'white', lineHeight: 1 }}>
                                                         {match.p2b.name}
                                                     </div>
                                                 </>
@@ -203,6 +203,24 @@ export const History: React.FC<HistoryProps> = ({ onEdit }) => {
                     )}
                 </AnimatePresence>
             </div>
+
+            <style>{`
+        @media (max-width: 768px) {
+          .match-grid {
+            grid-template-columns: 1fr !important;
+            gap: 16px !important;
+            text-align: center !important;
+          }
+          .match-grid > div { text-align: center !important; }
+          .match-grid > div:nth-child(1) { order: 2; }
+          .match-grid > div:nth-child(2) { order: 1; }
+          .match-grid > div:nth-child(3) { order: 3; }
+          .player-name { fontSize: 1.2rem !important; }
+          .score-box { padding: 10px 20px !important; font-size: 1.5rem !important; }
+        }
+      `}</style>
         </div>
+    );
+};
     );
 };
