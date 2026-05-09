@@ -149,6 +149,6 @@ select:focus {
 /* Mobile Adjustments */
 @media (max-width: 600px) {
   .container {
-    padding: calc(1rem + var(--safe-top)) 1rem calc(6rem + var(--safe-bottom));
+    padding: calc(1rem + var(--safe-top)) 0.75rem calc(6rem + var(--safe-bottom));
   }
 }

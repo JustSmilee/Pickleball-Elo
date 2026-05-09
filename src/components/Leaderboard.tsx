@@ -47,7 +47,7 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ onViewProfile }) => {
     if (loading) return <div className="fade-in">Đang tải bảng xếp hạng...</div>;
 
     return (
-        <div className="fade-in glass-card" style={{ padding: '32px' }}>
+        <div className="fade-in glass-card leaderboard-container" style={{ padding: '32px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', flexWrap: 'wrap', gap: '20px' }}>
                 <h2 className="neon-text heading-font" style={{ fontSize: '2rem', display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <Star color="var(--primary-neon)" fill="var(--primary-neon)" /> Bảng xếp hạng
@@ -60,6 +60,7 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ onViewProfile }) => {
                             placeholder="Tìm tên hoặc USERAD..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
+                            className="search-input"
                             style={{
                                 background: '#1e2337',
                                 border: '2px solid var(--primary-neon)',
@@ -134,7 +135,7 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ onViewProfile }) => {
                         </div>
 
                         <div style={{ textAlign: 'right' }}>
-                            <div style={{ color: 'var(--primary-neon)', fontWeight: 900, fontSize: '1.4rem', fontFamily: 'var(--font-heading)' }}>
+                            <div className="elo-text" style={{ color: 'var(--primary-neon)', fontWeight: 900, fontSize: '1.4rem', fontFamily: 'var(--font-heading)' }}>
                                 {player.elo_rating}
                             </div>
                             <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', fontWeight: 700, textTransform: 'uppercase' }}>Elo</div>
@@ -178,13 +179,17 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ onViewProfile }) => {
           grid-template-columns: 50px 1fr 80px 140px 60px;
         }
         @media (max-width: 768px) {
+          .leaderboard-container { padding: 16px 12px !important; }
           .leaderboard-grid-row { 
-            grid-template-columns: 40px 1fr 70px 50px !important;
-            padding: 12px 16px !important;
-            gap: 8px !important;
+            grid-template-columns: 25px 1fr 55px 40px !important;
+            padding: 12px 8px !important;
+            gap: 6px !important;
           }
           .hide-mobile { display: none !important; }
           .player-avatar { display: none !important; }
+          .player-name { font-size: 0.95rem !important; }
+          .elo-text { font-size: 1rem !important; }
+          .search-input { width: 100% !important; }
         }
       `}</style>
         </div>
