@@ -158,6 +158,23 @@ export const matchService = {
         if (deleteError) throw deleteError;
     },
 
+    async getPlayerMatches(playerId: string): Promise<any[]> {
+        if (!supabase) return [];
+        const { data, error } = await supabase
+            .from('matches')
+            .select(`
+                *,
+                p1:team1_player1_id(name),
+                p1b:team1_player2_id(name),
+                p2:team2_player1_id(name),
+                p2b:team2_player2_id(name)
+            `)
+            .or(`team1_player1_id.eq.${playerId},team1_player2_id.eq.${playerId},team2_player1_id.eq.${playerId},team2_player2_id.eq.${playerId}`)
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        return data || [];
+    }
 };
 
 export const tournamentService = {

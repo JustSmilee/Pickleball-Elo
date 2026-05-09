@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { playerService } from '../services/api';
+import { matchService, playerService } from '../services/api';
 import type { Player } from '../types';
-import { X, TrendingUp, Target, Award } from 'lucide-react';
+import { X, TrendingUp, Target, Award, Clock } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { motion } from 'framer-motion';
 
@@ -13,6 +13,7 @@ interface PlayerProfileProps {
 export const PlayerProfile: React.FC<PlayerProfileProps> = ({ player, onClose }) => {
     const [trend, setTrend] = useState<{ date: string, elo: number }[]>([]);
     const [streak, setStreak] = useState(0);
+    const [matches, setMatches] = useState<any[]>([]);
 
     useEffect(() => {
         playerService.getPlayerEloTrend(player.id).then(data => {
@@ -20,6 +21,9 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({ player, onClose })
         });
         playerService.calculateWinStreak(player.id).then(s => {
             setStreak(s);
+        });
+        matchService.getPlayerMatches(player.id).then(m => {
+            setMatches(m);
         });
     }, [player.id]);
 
@@ -116,10 +120,51 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({ player, onClose })
                     </div>
                 </div>
 
-                <div className="glass-card" style={{ padding: '32px', background: 'hsla(var(--primary-neon-h), 100%, 50%, 0.05)', border: 'none', borderRadius: '24px' }}>
-                    <p style={{ color: 'var(--text-dim)', fontSize: '1rem', textAlign: 'center', fontWeight: 500 }}>
-                        Điểm Elo được tính toán dựa trên sức mạnh của đối thủ và kết quả trận đấu.
-                    </p>
+                <div style={{ marginTop: '48px' }}>
+                    <h3 className="heading-font" style={{ fontSize: '1.5rem', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <Clock size={24} color="var(--primary-neon)" /> LỊCH SỬ TRẬN ĐẤU GẦN ĐÂY
+                    </h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        {matches.length === 0 ? (
+                            <div style={{ color: 'var(--text-dim)', textAlign: 'center', padding: '40px', background: 'rgba(255,255,255,0.02)', borderRadius: '24px' }}>
+                                Chưa có lịch sử trận đấu.
+                            </div>
+                        ) : (
+                            matches.map((match: any) => {
+                                const isTeam1 = [match.team1_player1_id, match.team1_player2_id].includes(player.id);
+                                const won = (isTeam1 && match.team1_score > match.team2_score) || (!isTeam1 && match.team2_score > match.team1_score);
+                                const delta = isTeam1 ? match.elo_delta_team1 : match.elo_delta_team2;
+
+                                return (
+                                    <div key={match.id} className="glass-card" style={{ padding: '20px 24px', background: 'rgba(255,255,255,0.03)', borderRadius: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                                            <div style={{
+                                                width: '12px', height: '12px', borderRadius: '50%',
+                                                background: won ? 'var(--success)' : 'var(--error)',
+                                                boxShadow: won ? '0 0 10px var(--success)' : '0 0 10px var(--error)'
+                                            }} />
+                                            <div>
+                                                <div style={{ fontWeight: 800, fontSize: '1rem' }}>
+                                                    {isTeam1 ? `${match.p2.name}${match.p2b ? ' & ' + match.p2b.name : ''}` : `${match.p1.name}${match.p1b ? ' & ' + match.p1b.name : ''}`}
+                                                </div>
+                                                <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', fontWeight: 700 }}>
+                                                    {new Date(match.created_at).toLocaleDateString()} • {match.type === 'doubles' ? 'ĐÔI' : 'ĐƠN'}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div style={{ textAlign: 'right' }}>
+                                            <div style={{ fontWeight: 900, fontSize: '1.2rem', color: won ? 'var(--success)' : 'var(--error)' }}>
+                                                {won ? '+' : ''}{delta}
+                                            </div>
+                                            <div style={{ fontSize: '0.8rem', fontWeight: 800 }}>
+                                                {match.team1_score} - {match.team2_score}
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })
+                        )}
+                    </div>
                 </div>
             </motion.div>
         </motion.div>

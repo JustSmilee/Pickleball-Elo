@@ -11,6 +11,7 @@ export const History: React.FC<HistoryProps> = ({ onEdit }) => {
     const [matches, setMatches] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [isDeleting, setIsDeleting] = useState<string | null>(null);
+    const [searchQuery, setSearchQuery] = useState('');
 
     const fetchMatches = () => {
         matchService.getRecentMatches().then(data => {
@@ -22,6 +23,20 @@ export const History: React.FC<HistoryProps> = ({ onEdit }) => {
     useEffect(() => {
         fetchMatches();
     }, []);
+
+    const filteredMatches = matches.filter(match => {
+        const query = searchQuery.toLowerCase();
+        return (
+            match.p1?.name.toLowerCase().includes(query) ||
+            match.p1b?.name.toLowerCase().includes(query) ||
+            match.p2?.name.toLowerCase().includes(query) ||
+            match.p2b?.name.toLowerCase().includes(query) ||
+            match.p1?.user_ad?.toLowerCase().includes(query) ||
+            match.p1b?.user_ad?.toLowerCase().includes(query) ||
+            match.p2?.user_ad?.toLowerCase().includes(query) ||
+            match.p2b?.user_ad?.toLowerCase().includes(query)
+        );
+    });
 
     const handleDelete = async (matchId: string) => {
         if (!window.confirm('Bạn có chắc muốn xoá trận đấu này? Điểm Elo sẽ được hoàn tác.')) return;
@@ -58,19 +73,42 @@ export const History: React.FC<HistoryProps> = ({ onEdit }) => {
                 <h2 className="neon-text heading-font" style={{ fontSize: '2rem', display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <Clock color="var(--primary-neon)" /> Lịch sử trận đấu
                 </h2>
-                <div style={{ fontSize: '0.9rem', color: 'var(--text-dim)', background: 'rgba(255,255,255,0.05)', padding: '6px 12px', borderRadius: '20px' }}>
-                    {matches.length} Trận đấu
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                    <div style={{ position: 'relative' }}>
+                        <input
+                            type="text"
+                            placeholder="Tìm kiếm vận động viên..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            style={{
+                                background: '#1e2337',
+                                border: '2px solid var(--primary-neon)',
+                                color: 'white',
+                                padding: '12px 16px 12px 44px',
+                                borderRadius: '24px',
+                                fontSize: '1rem',
+                                width: '300px',
+                                transition: 'all 0.3s',
+                                outline: 'none',
+                                boxShadow: '0 0 15px rgba(0, 242, 255, 0.1)'
+                            }}
+                        />
+                        <Users size={18} color="var(--primary-neon)" style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)' }} />
+                    </div>
+                    <div style={{ fontSize: '0.9rem', color: 'var(--text-dim)', background: 'rgba(255,255,255,0.05)', padding: '6px 12px', borderRadius: '20px' }}>
+                        {filteredMatches.length} Trận đấu
+                    </div>
                 </div>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 <AnimatePresence>
-                    {matches.length === 0 ? (
+                    {filteredMatches.length === 0 ? (
                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="glass-card" style={{ padding: '60px', textAlign: 'center' }}>
-                            <p style={{ color: 'var(--text-dim)' }}>Chưa có trận đấu nào. Hãy bắt đầu chơi nhé!</p>
+                            <p style={{ color: 'var(--text-dim)' }}>Không tìm thấy trận đấu nào phù hợp.</p>
                         </motion.div>
                     ) : (
-                        matches.map((match, index) => (
+                        filteredMatches.map((match, index) => (
                             <motion.div
                                 key={match.id}
                                 initial={{ opacity: 0, scale: 0.95 }}
@@ -110,13 +148,13 @@ export const History: React.FC<HistoryProps> = ({ onEdit }) => {
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: '24px' }}>
                                     <div style={{ textAlign: 'right' }}>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                            <div style={{ fontWeight: 900, fontSize: '1.5rem', color: match.team1_score > match.team2_score ? 'var(--primary-neon)' : 'white', fontFamily: 'var(--font-heading)', lineHeight: 1 }}>
+                                            <div style={{ fontWeight: 900, fontSize: '1.5rem', color: match.team1_score > match.team2_score ? 'var(--primary-neon)' : 'white', lineHeight: 1 }}>
                                                 {match.p1?.name}
                                             </div>
                                             {match.p1b && (
                                                 <>
                                                     <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', fontWeight: 800, margin: '-2px 0' }}>&</div>
-                                                    <div style={{ fontWeight: 900, fontSize: '1.5rem', color: match.team1_score > match.team2_score ? 'var(--primary-neon)' : 'white', fontFamily: 'var(--font-heading)', lineHeight: 1 }}>
+                                                    <div style={{ fontWeight: 900, fontSize: '1.5rem', color: match.team1_score > match.team2_score ? 'var(--primary-neon)' : 'white', lineHeight: 1 }}>
                                                         {match.p1b.name}
                                                     </div>
                                                 </>
@@ -142,13 +180,13 @@ export const History: React.FC<HistoryProps> = ({ onEdit }) => {
 
                                     <div style={{ textAlign: 'left' }}>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                            <div style={{ fontWeight: 900, fontSize: '1.5rem', color: match.team2_score > match.team1_score ? 'var(--secondary-neon)' : 'white', fontFamily: 'var(--font-heading)', lineHeight: 1 }}>
+                                            <div style={{ fontWeight: 900, fontSize: '1.5rem', color: match.team2_score > match.team1_score ? 'var(--secondary-neon)' : 'white', lineHeight: 1 }}>
                                                 {match.p2?.name}
                                             </div>
                                             {match.p2b && (
                                                 <>
                                                     <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', fontWeight: 800, margin: '-2px 0' }}>&</div>
-                                                    <div style={{ fontWeight: 900, fontSize: '1.5rem', color: match.team2_score > match.team1_score ? 'var(--secondary-neon)' : 'white', fontFamily: 'var(--font-heading)', lineHeight: 1 }}>
+                                                    <div style={{ fontWeight: 900, fontSize: '1.5rem', color: match.team2_score > match.team1_score ? 'var(--secondary-neon)' : 'white', lineHeight: 1 }}>
                                                         {match.p2b.name}
                                                     </div>
                                                 </>

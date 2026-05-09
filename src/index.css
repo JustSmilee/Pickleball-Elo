@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800;900&family=Quicksand:wght@500;600;700&family=Outfit:wght@800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Outfit:wght@800;900&display=swap');
 
 :root {
   /* Cute & Modern Palette */
@@ -19,9 +19,8 @@
   --glass-border: rgba(255, 255, 255, 0.08);
   --glass-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
 
-  --font-main: 'Be Vietnam Pro', sans-serif;
-  --font-cute: 'Quicksand', sans-serif;
-  --font-heading: 'Outfit', sans-serif;
+  --font-main: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-heading: 'Inter', 'Outfit', system-ui, sans-serif;
 
   --safe-top: env(safe-area-inset-top);
   --safe-bottom: env(safe-area-inset-bottom);
@@ -100,21 +99,33 @@ h3,
 
 input,
 select {
-  font-family: var(--font-main);
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid var(--glass-border);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
+  background-color: #1e2337 !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 1rem center !important;
+  background-size: 1.2rem !important;
+  border: 2px solid var(--glass-border);
   border-radius: 18px;
-  color: white;
-  padding: 1rem 1.25rem;
+  color: #ffffff !important;
+  padding: 1rem 3rem 1rem 1.25rem;
   width: 100%;
   transition: all 0.3s ease;
+  cursor: pointer;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+
+select option {
+  background-color: #1e2337 !important;
+  color: #ffffff !important;
 }
 
 input:focus,
 select:focus {
   outline: none;
   border-color: var(--primary-neon);
-  background: rgba(255, 255, 255, 0.07);
   box-shadow: 0 0 0 4px rgba(0, 242, 255, 0.1);
 }
 

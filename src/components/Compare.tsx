@@ -79,13 +79,13 @@ export const Compare: React.FC = () => {
                     </select>
                     {player1 && (
                         <div style={{ textAlign: 'center' }}>
-                            <div style={{ color: 'var(--primary-neon)', fontWeight: 900, fontSize: '2.5rem', fontFamily: 'var(--font-heading)' }}>{player1.elo_rating}</div>
+                            <div style={{ color: 'var(--primary-neon)', fontWeight: 900, fontSize: '2.5rem' }}>{player1.elo_rating}</div>
                             <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)', fontWeight: 700, letterSpacing: '0.1em' }}>CHỈ SỐ ELO</div>
                         </div>
                     )}
                 </motion.div>
 
-                <div style={{ color: 'var(--text-dim)', fontWeight: 900, fontSize: '1.5rem', fontFamily: 'var(--font-heading)' }}>VS</div>
+                <div style={{ color: 'var(--text-dim)', fontWeight: 900, fontSize: '1.5rem' }}>VS</div>
 
                 <motion.div whileHover={{ y: -5 }} className="glass-card" style={{ padding: '32px', borderTop: '8px solid var(--secondary-neon)', borderRadius: '32px' }}>
                     <select value={p2Id} onChange={e => setP2Id(e.target.value)} style={{ width: '100%', marginBottom: '20px', borderRadius: '18px' }}>
@@ -94,7 +94,7 @@ export const Compare: React.FC = () => {
                     </select>
                     {player2 && (
                         <div style={{ textAlign: 'center' }}>
-                            <div style={{ color: 'var(--secondary-neon)', fontWeight: 900, fontSize: '2.5rem', fontFamily: 'var(--font-heading)' }}>{player2.elo_rating}</div>
+                            <div style={{ color: 'var(--secondary-neon)', fontWeight: 900, fontSize: '2.5rem' }}>{player2.elo_rating}</div>
                             <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)', fontWeight: 700, letterSpacing: '0.1em' }}>CHỈ SỐ ELO</div>
                         </div>
                     )}
@@ -105,10 +105,10 @@ export const Compare: React.FC = () => {
                 {h2hData && (
                     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
                         <div className="glass-card" style={{ padding: '48px', textAlign: 'center', marginBottom: '40px', borderRadius: '40px' }}>
-                            <h3 className="heading-font" style={{ fontSize: '1.6rem', marginBottom: '32px', color: 'var(--accent-cute)' }}>THỐNG KÊ ĐỐI ĐẦU</h3>
+                            <h3 style={{ fontSize: '1.6rem', marginBottom: '32px', color: 'var(--accent-cute)', fontWeight: 900 }}>THỐNG KÊ ĐỐI ĐẦU</h3>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '32px', marginBottom: '24px' }}>
                                 <div style={{ flex: 1, textAlign: 'right' }}>
-                                    <div style={{ fontSize: '4rem', fontWeight: 900, color: 'var(--primary-neon)', fontFamily: 'var(--font-heading)', lineHeight: 1 }}>{h2hData.p1Wins}</div>
+                                    <div style={{ fontSize: '4rem', fontWeight: 900, color: 'var(--primary-neon)', lineHeight: 1 }}>{h2hData.p1Wins}</div>
                                     <div style={{ fontSize: '0.85rem', color: 'var(--text-dim)', fontWeight: 700 }}>BÀN THẮNG</div>
                                 </div>
                                 <div style={{ width: '120px', height: '14px', background: 'rgba(255,255,255,0.05)', borderRadius: '7px', overflow: 'hidden', display: 'flex', border: '1px solid var(--glass-border)' }}>
@@ -116,7 +116,7 @@ export const Compare: React.FC = () => {
                                     <div style={{ width: `${(h2hData.p2Wins / (h2hData.total || 1)) * 100}%`, background: 'var(--secondary-neon)' }} />
                                 </div>
                                 <div style={{ flex: 1, textAlign: 'left' }}>
-                                    <div style={{ fontSize: '4rem', fontWeight: 900, color: 'var(--secondary-neon)', fontFamily: 'var(--font-heading)', lineHeight: 1 }}>{h2hData.p2Wins}</div>
+                                    <div style={{ fontSize: '4rem', fontWeight: 900, color: 'var(--secondary-neon)', lineHeight: 1 }}>{h2hData.p2Wins}</div>
                                     <div style={{ fontSize: '0.85rem', color: 'var(--text-dim)', fontWeight: 700 }}>BÀN THẮNG</div>
                                 </div>
                             </div>
@@ -125,7 +125,7 @@ export const Compare: React.FC = () => {
                             </div>
 
                             <div style={{ marginTop: '48px' }}>
-                                <h3 className="heading-font" style={{ fontSize: '1.2rem', marginBottom: '24px', color: 'var(--primary-neon)' }}>DỰ BÁO CỦA AI (DỰA TRÊN ELO)</h3>
+                                <h3 style={{ fontSize: '1.2rem', marginBottom: '24px', color: 'var(--primary-neon)', fontWeight: 900 }}>DỰ BÁO CHIẾN THẮNG (DỰA TRÊN ELO)</h3>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '20px', marginBottom: '12px' }}>
                                     <div style={{ flex: 1, textAlign: 'right', fontWeight: 900, fontSize: '1.2rem' }}>{Math.round(h2hData.winProb * 100)}%</div>
                                     <div style={{ width: '200px', height: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', overflow: 'hidden', display: 'flex' }}>
@@ -138,7 +138,7 @@ export const Compare: React.FC = () => {
                         </div>
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                            <h4 className="heading-font" style={{ fontSize: '1.1rem', color: 'var(--text-dim)', marginBottom: '8px' }}>LỊCH SỬ GẦN ĐÂY</h4>
+                            <h4 style={{ fontSize: '1.1rem', color: 'var(--text-dim)', marginBottom: '8px', fontWeight: 800 }}>LỊCH SỬ GẦN ĐÂY</h4>
                             {h2hData.matches.map((m: any) => {
                                 const p1InT1 = [m.team1_player1_id, m.team1_player2_id].includes(p1Id);
                                 const p1Won = (p1InT1 && m.team1_score > m.team2_score) || (!p1InT1 && m.team2_score > m.team1_score);
@@ -149,11 +149,11 @@ export const Compare: React.FC = () => {
                                                 {p1Won ? <TrendingUp color="var(--success)" size={20} /> : <TrendingDown color="var(--error)" size={20} />}
                                             </div>
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                                <div style={{ fontWeight: 900, color: p1Won ? 'var(--primary-neon)' : 'white', fontSize: '1.1rem', fontFamily: 'var(--font-heading)', lineHeight: 1.1 }}>
+                                                <div style={{ fontWeight: 900, color: p1Won ? 'var(--primary-neon)' : 'white', fontSize: '1.1rem', lineHeight: 1.1 }}>
                                                     {p1InT1 ? m.p1?.name : m.p2?.name}
                                                 </div>
                                                 {(p1InT1 ? m.p1b : m.p2b) && (
-                                                    <div style={{ fontWeight: 900, color: p1Won ? 'var(--primary-neon)' : 'white', fontSize: '1.1rem', fontFamily: 'var(--font-heading)', lineHeight: 1.1 }}>
+                                                    <div style={{ fontWeight: 900, color: p1Won ? 'var(--primary-neon)' : 'white', fontSize: '1.1rem', lineHeight: 1.1 }}>
                                                         {p1InT1 ? m.p1b.name : m.p2b.name}
                                                     </div>
                                                 )}
@@ -161,7 +161,7 @@ export const Compare: React.FC = () => {
                                         </div>
 
                                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', flex: 1 }}>
-                                            <div style={{ fontFamily: 'var(--font-heading)', fontSize: '1.6rem', fontWeight: 900, color: 'white' }}>
+                                            <div style={{ fontSize: '1.6rem', fontWeight: 900, color: 'white' }}>
                                                 {p1InT1 ? `${m.team1_score} - ${m.team2_score}` : `${m.team2_score} - ${m.team1_score}`}
                                             </div>
                                             <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', fontWeight: 700 }}>
@@ -170,11 +170,11 @@ export const Compare: React.FC = () => {
                                         </div>
 
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', textAlign: 'right', flex: 1 }}>
-                                            <div style={{ fontWeight: 900, color: !p1Won ? 'var(--secondary-neon)' : 'white', fontSize: '1.1rem', fontFamily: 'var(--font-heading)', lineHeight: 1.1 }}>
+                                            <div style={{ fontWeight: 900, color: !p1Won ? 'var(--secondary-neon)' : 'white', fontSize: '1.1rem', lineHeight: 1.1 }}>
                                                 {p1InT1 ? m.p2?.name : m.p1?.name}
                                             </div>
                                             {(p1InT1 ? m.p2b : m.p1b) && (
-                                                <div style={{ fontWeight: 900, color: !p1Won ? 'var(--secondary-neon)' : 'white', fontSize: '1.1rem', fontFamily: 'var(--font-heading)', lineHeight: 1.1 }}>
+                                                <div style={{ fontWeight: 900, color: !p1Won ? 'var(--secondary-neon)' : 'white', fontSize: '1.1rem', lineHeight: 1.1 }}>
                                                     {p1InT1 ? m.p2b.name : m.p1b.name}
                                                 </div>
                                             )}

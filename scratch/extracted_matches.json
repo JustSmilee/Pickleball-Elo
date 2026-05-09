@@ -1,0 +1,163 @@
+[
+  {
+    "team1": "Trần Việt Tùng - Nguyễn Lâm Trường",
+    "team2": "Nguyễn Tuấn Sơn - Hà Vũ Đức Anh",
+    "score1": 0,
+    "score2": 2,
+    "is_knockout": false
+  },
+  {
+    "team1": "Nguyễn Hoàng Minh Hiền - Nguyễn Đức Kiên",
+    "team2": "Doãn Hữu Thắng - Hoan Nguyên",
+    "score1": 2,
+    "score2": 5,
+    "is_knockout": false
+  },
+  {
+    "team1": "Trần Tuấn Hiệp - Hoàng Quang Vinh",
+    "team2": "Nguyễn Văn Hải - Hoàng Trần Xuân Sơn",
+    "score1": 1,
+    "score2": 8,
+    "is_knockout": false
+  },
+  {
+    "team1": "Nguyễn Hữu Tuấn Duy - Nguyễn Thị Thùy Dương",
+    "team2": "Dương Viết Đức - Phan Hương Trà",
+    "score1": 1,
+    "score2": 3,
+    "is_knockout": false
+  },
+  {
+    "team1": "Trần Việt Tùng - Nguyễn Lâm Trường",
+    "team2": "Nguyễn Hoàng Minh Hiền - Nguyễn Đức Kiên",
+    "score1": 10,
+    "score2": 12,
+    "is_knockout": false
+  },
+  {
+    "team1": "Trần Tuấn Hiệp - Hoàng Quang Vinh",
+    "team2": "Nguyễn Hữu Tuấn Duy - Nguyễn Thị Thùy Dương",
+    "score1": 11,
+    "score2": 8,
+    "is_knockout": false
+  },
+  {
+    "team1": "Nguyễn Hoàng Minh Hiền - Nguyễn Đức Kiên",
+    "team2": "Nguyễn Hữu Tuấn Duy - Nguyễn Thị Thùy Dương",
+    "score1": 6,
+    "score2": 11,
+    "is_knockout": false
+  },
+  {
+    "team1": "Trần Việt Tùng - Nguyễn Lâm Trường",
+    "team2": "Trần Tuấn Hiệp - Hoàng Quang Vinh",
+    "score1": 7,
+    "score2": 11,
+    "is_knockout": false
+  },
+  {
+    "team1": "Trần Việt Tùng - Nguyễn Lâm Trường",
+    "team2": "Nguyễn Hữu Tuấn Duy - Nguyễn Thị Thùy Dương",
+    "score1": 9,
+    "score2": 11,
+    "is_knockout": false
+  },
+  {
+    "team1": "Nguyễn Hoàng Minh Hiền - Nguyễn Đức Kiên",
+    "team2": "Trần Tuấn Hiệp - Hoàng Quang Vinh",
+    "score1": 4,
+    "score2": 11,
+    "is_knockout": false
+  },
+  {
+    "team1": "Phan Hoàng Anh - Nguyễn Mạnh Thắng (12)",
+    "team2": "Đinh Anh Tiến - Trần Đức Nhân",
+    "score1": 0,
+    "score2": 5,
+    "is_knockout": false
+  },
+  {
+    "team1": "Bùi Minh Đức - Vũ Hồng Ngọc",
+    "team2": "Nguyễn Mạnh Thắng (8) - Hà Thị Hiên",
+    "score1": 1,
+    "score2": 10,
+    "is_knockout": false
+  },
+  {
+    "team1": "Nguyễn Thị Phương Thảo - Nguyễn Lê Anh",
+    "team2": "Nguyễn Thị Thu Phương - Bùi Tăng Bảo Ngọc",
+    "score1": 10,
+    "score2": 4,
+    "is_knockout": false
+  },
+  {
+    "team1": "Tăng khánh Thiện - Nguyễn Ngọc Tuấn",
+    "team2": "Phan Hoàng Anh - Nguyễn Mạnh Thắng (12)",
+    "score1": 11,
+    "score2": 6,
+    "is_knockout": false
+  },
+  {
+    "team1": "Bùi Minh Đức - Vũ Hồng Ngọc",
+    "team2": "Nguyễn Thị Phương Thảo - Nguyễn Lê Anh",
+    "score1": 1,
+    "score2": 11,
+    "is_knockout": false
+  },
+  {
+    "team1": "Phan Hoàng Anh - Nguyễn Mạnh Thắng (12)",
+    "team2": "Nguyễn Thị Phương Thảo - Nguyễn Lê Anh",
+    "score1": 11,
+    "score2": 7,
+    "is_knockout": false
+  },
+  {
+    "team1": "Tăng khánh Thiện - Nguyễn Ngọc Tuấn",
+    "team2": "Bùi Minh Đức - Vũ Hồng Ngọc",
+    "score1": 11,
+    "score2": 1,
+    "is_knockout": false
+  },
+  {
+    "team1": "Tăng khánh Thiện - Nguyễn Ngọc Tuấn",
+    "team2": "Nguyễn Thị Phương Thảo - Nguyễn Lê Anh",
+    "score1": 12,
+    "score2": 10,
+    "is_knockout": false
+  },
+  {
+    "team1": "Phan Hoàng Anh - Nguyễn Mạnh Thắng (12)",
+    "team2": "Bùi Minh Đức - Vũ Hồng Ngọc",
+    "score1": 10,
+    "score2": 12,
+    "is_knockout": false
+  },
+  {
+    "team1": "Đinh Anh Tiến - Trần Đức Nhân",
+    "team2": "Nguyễn Đức Xuân Bình - Nguyễn Bích Ngọc",
+    "score1": 5,
+    "score2": 11,
+    "is_knockout": false
+  },
+  {
+    "team1": "Nguyễn Huy Hoàng - Nguyễn Viết Chính",
+    "team2": "Nguyễn Mạnh Thắng (8) - Hà Thị Hiên",
+    "score1": 11,
+    "score2": 2,
+    "is_knockout": false
+  },
+  {
+    "team1": "Nguyễn Thị Thu Phương - Bùi Tăng Bảo Ngọc",
+    "team2": "Nguyễn Đức Xuân Bình - Nguyễn Bích Ngọc",
+    "score1": 2,
+    "score2": 11,
+    "is_knockout": false
+  },
+  {
+    "team1": "Đinh Anh Tiến - Trần Đức Nhân",
+    "team2": "Nguyễn Mạnh Thắng (8) - Hà Thị Hiên",
+    "score1": 11,
+    "score2": 5,
+    "is_knockout": false
+  }
+]

@@ -85,7 +85,14 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ onViewProfile }) => {
                                 <User size={24} color="var(--primary-neon)" />
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                <span style={{ fontWeight: 800, fontSize: '1.15rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{player.name}</span>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <span style={{ fontWeight: 800, fontSize: '1.15rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{player.name}</span>
+                                    {player.user_ad && (
+                                        <span style={{ fontSize: '0.75rem', color: 'var(--primary-neon)', background: 'rgba(0, 242, 255, 0.1)', padding: '2px 8px', borderRadius: '10px', fontWeight: 700 }}>
+                                            @{player.user_ad}
+                                        </span>
+                                    )}
+                                </div>
                                 {player.current_streak && player.current_streak >= 2 && (
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#FF4500', fontSize: '0.7rem', fontWeight: 900 }}>
                                         🔥 {player.current_streak} CHUỖI THẮNG

@@ -16,7 +16,7 @@ export const MatchForm: React.FC<MatchFormProps> = ({ onSuccess, onCancel, editi
     const [tournaments, setTournaments] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
-    const [matchType, setMatchType] = useState<'singles' | 'doubles'>('singles');
+    const [matchType, setMatchType] = useState<'singles' | 'doubles'>('doubles');
 
     const [p1, setP1] = useState('');
     const [p1b, setP1b] = useState('');
@@ -197,7 +197,7 @@ export const MatchForm: React.FC<MatchFormProps> = ({ onSuccess, onCancel, editi
 
                     <div style={{ width: '100%', maxWidth: '400px' }}>
                         <label style={{ fontSize: '0.85rem', color: 'var(--text-dim)', marginBottom: '8px', display: 'block', textAlign: 'center', fontWeight: 600 }}>Gắn vào Giải đấu (Tùy chọn)</label>
-                        <select value={tournamentId} onChange={e => setTournamentId(e.target.value)} style={{ width: '100%', background: 'rgba(255,255,255,0.05)', borderRadius: '18px' }}>
+                        <select value={tournamentId} onChange={e => setTournamentId(e.target.value)} style={{ width: '100%', borderRadius: '18px' }}>
                             <option value="">Không có / Trận giao hữu</option>
                             {tournaments.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                         </select>
@@ -216,7 +216,7 @@ export const MatchForm: React.FC<MatchFormProps> = ({ onSuccess, onCancel, editi
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                             <div>
                                 <label style={{ fontSize: '0.85rem', color: 'var(--text-dim)', marginBottom: '8px', display: 'block', fontWeight: 600 }}>Người chơi 1</label>
-                                <select value={p1} onChange={e => setP1(e.target.value)} style={{ width: '100%', background: 'rgba(0,0,0,0.2)', borderRadius: '16px' }}>
+                                <select value={p1} onChange={e => setP1(e.target.value)} style={{ width: '100%', borderRadius: '16px' }}>
                                     <option value="">Chọn người chơi...</option>
                                     {getAvailablePlayers(p1).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                                 </select>
@@ -224,7 +224,7 @@ export const MatchForm: React.FC<MatchFormProps> = ({ onSuccess, onCancel, editi
                             {matchType === 'doubles' && (
                                 <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}>
                                     <label style={{ fontSize: '0.85rem', color: 'var(--text-dim)', marginBottom: '8px', display: 'block', fontWeight: 600 }}>Người chơi 2</label>
-                                    <select value={p1b} onChange={e => setP1b(e.target.value)} style={{ width: '100%', background: 'rgba(0,0,0,0.2)', borderRadius: '16px' }}>
+                                    <select value={p1b} onChange={e => setP1b(e.target.value)} style={{ width: '100%', borderRadius: '16px' }}>
                                         <option value="">Chọn người chơi...</option>
                                         {getAvailablePlayers(p1b).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                                     </select>
@@ -250,7 +250,7 @@ export const MatchForm: React.FC<MatchFormProps> = ({ onSuccess, onCancel, editi
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                             <div>
                                 <label style={{ fontSize: '0.85rem', color: 'var(--text-dim)', marginBottom: '8px', display: 'block', fontWeight: 600 }}>Người chơi 1</label>
-                                <select value={p2} onChange={e => setP2(e.target.value)} style={{ width: '100%', background: 'rgba(0,0,0,0.2)', borderRadius: '16px' }}>
+                                <select value={p2} onChange={e => setP2(e.target.value)} style={{ width: '100%', borderRadius: '16px' }}>
                                     <option value="">Chọn người chơi...</option>
                                     {getAvailablePlayers(p2).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                                 </select>
@@ -258,10 +258,10 @@ export const MatchForm: React.FC<MatchFormProps> = ({ onSuccess, onCancel, editi
                             {matchType === 'doubles' && (
                                 <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}>
                                     <label style={{ fontSize: '0.85rem', color: 'var(--text-dim)', marginBottom: '8px', display: 'block', fontWeight: 600 }}>Người chơi 2</label>
-                                    <select value={p2b} onChange={e => setP2b(e.target.value)} style={{ width: '100%', background: 'rgba(0,0,0,0.2)', borderRadius: '16px' }}>
-                                        <option value="">Chọn người chơi...</option>
-                                        {getAvailablePlayers(p2b).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                                    </select>
+                                <select value={p2b} onChange={e => setP2b(e.target.value)} style={{ width: '100%', borderRadius: '16px' }}>
+                                    <option value="">Chọn người chơi...</option>
+                                    {getAvailablePlayers(p2b).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                </select>
                                 </motion.div>
                             )}
                             <div style={{ marginTop: '12px' }}>
