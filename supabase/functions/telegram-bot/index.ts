@@ -121,56 +121,93 @@ async function handleIntent(chatId: number, intent: string, analysis: any, playe
 
     // --- INTENT: RECORD_MATCH ---
     if (intent === "RECORD_MATCH") {
-        const { team1, team2, score1, score2 } = analysis
+        const { team1, team2, score1, score2, tournament } = analysis
         const resolve = (names: string[]) => (names || []).map(n => {
-            const tgt = n.toLowerCase().trim()
+            const tgt = n.toLowerCase().trim().replace(/^@/, '')
             return players.find(p => 
                 p.name.toLowerCase().trim() === tgt || 
                 (p.user_ad && p.user_ad.toLowerCase().trim() === tgt)
             )
         }).filter(Boolean)
+        
         const res1 = resolve(team1), res2 = resolve(team2)
-        if (res1.length < team1.length || res2.length < team2.length) {
-            await sendMessage(chatId, `❌ Có người chơi không tồn tại hoặc sai tên/USERAD.`)
+        if (res1.length === 0 || res2.length === 0) {
+            await sendMessage(chatId, `❌ Không xác định được người chơi. Vui lòng kiểm tra lại tên hoặc @userad.`)
             return
         }
+
         const t1Avg = res1.reduce((s, p) => s + p.elo_rating, 0) / res1.length
         const t2Avg = res2.reduce((s, p) => s + p.elo_rating, 0) / res2.length
         const delta = calculateEloDelta(t1Avg, t2Avg, score1, score2)
-        await supabase.from("matches").insert({
+
+        let tournamentId = null
+        if (tournament) {
+            const { data: tData } = await supabase.from("tournaments").select("id").ilike("name", `%${tournament}%`).limit(1)
+            if (tData && tData.length > 0) tournamentId = tData[0].id
+        }
+
+        const { error: mErr } = await supabase.from("matches").insert({
             type: res1.length > 1 ? 'doubles' : 'singles',
             team1_player1_id: res1[0].id, team1_player2_id: res1[1]?.id || null,
             team2_player1_id: res2[0].id, team2_player2_id: res2[1]?.id || null,
-            team1_score: score1, team2_score: score2, elo_delta_team1: delta, elo_delta_team2: -delta
+            team1_score: score1, team2_score: score2, 
+            elo_delta_team1: delta, elo_delta_team2: -delta,
+            tournament_id: tournamentId
         })
-        for (const p of res1) await supabase.from("players").update({ elo_rating: p.elo_rating + delta, wins: delta > 0 ? (p.wins || 0) + 1 : p.wins, losses: delta < 0 ? (p.losses || 0) + 1 : p.losses, matches_played: (p.matches_played || 0) + 1 }).eq("id", p.id)
-        for (const p of res2) await supabase.from("players").update({ elo_rating: p.elo_rating - delta, wins: delta < 0 ? (p.wins || 0) + 1 : p.wins, losses: delta > 0 ? (p.losses || 0) + 1 : p.losses, matches_played: (p.matches_played || 0) + 1 }).eq("id", p.id)
-        await sendMessage(chatId, `✅ <b>Ghi nhận thành công!</b>\n🏆 <b>${score1 > score2 ? team1.join("&") : team2.join("&")}</b> thắng. Elo: <code>${delta > 0 ? "+" : ""}${delta}</code>`)
+
+        if (mErr) {
+            await sendMessage(chatId, `❌ Lỗi khi lưu trận đấu: ${mErr.message}`)
+            return
+        }
+
+        for (const p of res1) await supabase.from("players").update({ elo_rating: p.elo_rating + delta, wins: score1 > score2 ? (p.wins || 0) + 1 : p.wins, losses: score2 > score1 ? (p.losses || 0) + 1 : p.losses, matches_played: (p.matches_played || 0) + 1 }).eq("id", p.id)
+        for (const p of res2) await supabase.from("players").update({ elo_rating: p.elo_rating - delta, wins: score2 > score1 ? (p.wins || 0) + 1 : p.wins, losses: score1 > score2 ? (p.losses || 0) + 1 : p.losses, matches_played: (p.matches_played || 0) + 1 }).eq("id", p.id)
+        
+        await sendMessage(chatId, `✅ <b>Ghi nhận thành công!</b>\n🏆 <b>${score1 > score2 ? team1.join(" & ") : team2.join(" & ")}</b> thắng.\n📈 Elo: <code>${delta > 0 ? "+" : ""}${delta}</code>\n${tournamentId ? `🏟️ Giải đấu: <i>${tournament}</i>` : ""}`)
     }
 }
 
 async function getLlmAnalysis(text: string, players: any[]) {
     if (!GEMINI_API_KEY) return null;
+    
+    const { data: tournaments } = await supabase.from("tournaments").select("name")
+    const tContext = tournaments?.map(t => t.name).join(", ") || "None"
     const playerContext = players.map(p => `${p.name}${p.user_ad ? ` (@${p.user_ad})` : ''}`).join(", ")
-    const prompt = `You are a Pickleball Assistant. Intent extraction:
-    Available Players (Name and USERAD): ${playerContext}
-    Message: "${text}"
+
+    const prompt = `You are a Pickleball Tournament Assistant. Extract match details from the message.
+    
+    CONTEXT:
+    - Available Players: ${playerContext}
+    - Active Tournaments: ${tContext}
+    
+    MESSAGE: "${text}"
+    
     INTENTS:
-    1. RECORD_MATCH: {"intent": "RECORD_MATCH", "team1": [], "team2": [], "score1": 0, "score2": 0}
+    1. RECORD_MATCH: {"intent": "RECORD_MATCH", "team1": ["Name/USERAD"], "team2": ["Name/USERAD"], "score1": 15, "score2": 8, "tournament": "Tournament Name if mentioned"}
     2. GET_LEADERBOARD: {"intent": "GET_LEADERBOARD"}
     3. GET_PLAYER_STATS: {"intent": "GET_PLAYER_STATS", "target": "Name or USERAD"}
     4. QUERY_H2H: {"intent": "QUERY_H2H", "p1": "Name or USERAD", "p2": "Name or USERAD"}
     5. BALANCE_TEAMS: {"intent": "BALANCE_TEAMS", "players": ["N1","N2","N3","N4"]}
     6. PREDICT_MATCH: {"intent": "PREDICT_MATCH", "team1": [], "team2": []}
-    Rules: Match names or USERADs to Available Players. Return ONLY JSON.`;
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
-    const response = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) });
+    
+    CRITICAL RULES:
+    - If multiple players have the same name, use their @USERAD to disambiguate.
+    - Match names/USERADs exactly to the provided Available Players list.
+    - If the message says "Nguyễn Mạnh Thắng 8" or "Thắng 8", match to the one with user_ad '8'.
+    - Return ONLY JSON.`;
+
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+    const response = await fetch(url, { 
+        method: "POST", 
+        headers: { "Content-Type": "application/json" }, 
+        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) 
+    });
     const data = await response.json();
     if (!data.candidates) return { error: "AI Error" };
     try {
         const raw = data.candidates[0].content.parts[0].text;
-        const json = JSON.parse(raw.match(/\{[\s\S]*\}/)[0]);
-        return json;
+        const jsonMatch = raw.match(/\{[\s\S]*\}/);
+        return jsonMatch ? JSON.parse(jsonMatch[0]) : { error: "No JSON found" };
     } catch (e) { return { error: "Parse Error" }; }
 }
 
