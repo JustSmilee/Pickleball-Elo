@@ -88,10 +88,14 @@ async function handleIntent(chatId: number, intent: string, analysis: any, playe
 
     // --- INTENT: BALANCE_TEAMS ---
     if (intent === "BALANCE_TEAMS") {
-        const names = (analysis.players || []).map((n: string) => n.toLowerCase().trim())
-        const resolved = names.map((n: string) => players.find(p => p.name.toLowerCase().trim() === n)).filter(Boolean)
+        const names = (analysis.players || []).map((n: string) => n.toLowerCase().trim().replace(/^@/, ''))
+        const resolved = names.map((n: string) => players.find(p => 
+            p.name.toLowerCase().trim() === n || 
+            (p.user_ad && p.user_ad.toLowerCase().trim() === n)
+        )).filter(Boolean)
+        
         if (resolved.length < 4) {
-            await sendMessage(chatId, `❌ Cần ít nhất 4 người để chia đội.`)
+            await sendMessage(chatId, `❌ Cần ít nhất 4 người để chia đội. Vui lòng ghi đúng tên hoặc @userad.`)
             return
         }
         const p = resolved.slice(0, 4)
@@ -197,21 +201,30 @@ async function getLlmAnalysis(text: string, players: any[]) {
     - Return ONLY JSON.`;
 
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
-    const response = await fetch(url, { 
-        method: "POST", 
-        headers: { "Content-Type": "application/json" }, 
-        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) 
-    });
-    const data = await response.json();
-    if (!data.candidates) return { error: "AI Error" };
     try {
+        const response = await fetch(url, { 
+            method: "POST", 
+            headers: { "Content-Type": "application/json" }, 
+            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) 
+        });
+        const data = await response.json();
+        if (!data.candidates || data.candidates.length === 0) {
+            console.error("Gemini API Error:", JSON.stringify(data));
+            return { error: "AI Error" };
+        }
         const raw = data.candidates[0].content.parts[0].text;
         const jsonMatch = raw.match(/\{[\s\S]*\}/);
         return jsonMatch ? JSON.parse(jsonMatch[0]) : { error: "No JSON found" };
-    } catch (e) { return { error: "Parse Error" }; }
+    } catch (e) { 
+        console.error("Fetch/Parse Error:", e);
+        return { error: "Parse Error" }; 
+    }
 }
 
 serve(async (req) => {
+    // Health check for browser
+    if (req.method === "GET") return new Response("Pickleball Bot is running!", { status: 200 });
+
     try {
         const body = await req.json()
         const { data: players } = await supabase.from("players").select("*")
@@ -234,10 +247,19 @@ serve(async (req) => {
         const chatId = message.chat.id, text = message.text.toLowerCase().trim()
 
         if (text === "/start" || text === "/menu" || text === "menu") { await showMenu(chatId); return new Response("ok"); }
+        if (text === "/ping") { await sendMessage(chatId, "🏓 <b>Pong!</b> Bot đang hoạt động."); return new Response("ok"); }
 
+        console.log("Analyzing message:", message.text)
         const analysis = await getLlmAnalysis(message.text, players!)
-        if (!analysis || analysis.error) { if (text.length > 3) await sendMessage(chatId, "🤔 Bot chưa hiểu ý bạn."); return new Response("ok"); }
+        console.log("AI Analysis:", JSON.stringify(analysis))
+
+        if (!analysis || analysis.error) { 
+            if (text.length > 3) await sendMessage(chatId, "🤔 Bot chưa hiểu ý bạn."); 
+            return new Response("ok"); 
+        }
         await handleIntent(chatId, analysis.intent, analysis, players!)
-    } catch (err) { console.error(err) }
+    } catch (err) { 
+        console.error("CRITICAL ERROR:", err) 
+    }
     return new Response("ok")
 })

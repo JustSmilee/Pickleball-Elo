@@ -124,7 +124,29 @@ function App() {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
                   <StatsCard label="Trận đấu" value={stats.totalMatches} sub="Đã ghi nhận" color="var(--primary-neon)" />
                   <StatsCard label="Người chơi" value={stats.activePlayers} sub="Đang thi đấu" color="var(--secondary-neon)" />
-                  <StatsCard label="Cập nhật" value={new Date().toLocaleDateString('vi-VN')} sub="Hôm nay" color="var(--accent-cute)" />
+                  <motion.a
+                    href="https://t.me/pickle_elo_rank_bot"
+                    target="_blank"
+                    rel="noreferrer"
+                    whileHover={{ y: -8, scale: 1.02 }}
+                    className="glass-card"
+                    style={{ 
+                      padding: '24px', 
+                      position: 'relative', 
+                      overflow: 'hidden', 
+                      textDecoration: 'none', 
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      justifyContent: 'center',
+                      background: 'linear-gradient(135deg, rgba(0, 136, 204, 0.2), rgba(0, 136, 204, 0.05))',
+                      border: '1px solid rgba(0, 136, 204, 0.3)'
+                    }}
+                  >
+                    <div style={{ position: 'absolute', top: 0, left: 0, width: '6px', height: '100%', background: '#0088cc' }}></div>
+                    <div style={{ color: '#0088cc', fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px', fontFamily: 'var(--font-cute)' }}>Kênh hỗ trợ</div>
+                    <div style={{ color: 'white', fontWeight: 900, fontSize: '1.8rem', fontFamily: 'var(--font-heading)', lineHeight: 1.2 }}>Telegram Bot</div>
+                    <div style={{ color: 'var(--text-dim)', fontSize: '0.8rem', marginTop: '8px' }}>@pickle_elo_rank_bot</div>
+                  </motion.a>
                 </div>
 
                 <div style={{ marginTop: '1rem' }}>
