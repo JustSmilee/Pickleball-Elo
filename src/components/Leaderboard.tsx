@@ -12,6 +12,8 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ onViewProfile }) => {
     const [players, setPlayers] = useState<Player[]>([]);
     const [loading, setLoading] = useState(true);
 
+    const [searchQuery, setSearchQuery] = useState('');
+
     useEffect(() => {
         const fetchData = async () => {
             const data = await playerService.getAllPlayers();
@@ -24,6 +26,14 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ onViewProfile }) => {
         };
         fetchData();
     }, []);
+
+    const filteredPlayers = players.filter(p => {
+        const query = searchQuery.toLowerCase();
+        return (
+            p.name.toLowerCase().includes(query) ||
+            p.user_ad?.toLowerCase().includes(query)
+        );
+    });
 
     const getRankIcon = (index: number) => {
         switch (index) {
@@ -38,17 +48,40 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ onViewProfile }) => {
 
     return (
         <div className="fade-in glass-card" style={{ padding: '32px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', flexWrap: 'wrap', gap: '20px' }}>
                 <h2 className="neon-text heading-font" style={{ fontSize: '2rem', display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <Star color="var(--primary-neon)" fill="var(--primary-neon)" /> Bảng xếp hạng
                 </h2>
-                <div style={{ fontSize: '0.9rem', color: 'var(--text-dim)', background: 'rgba(255,255,255,0.05)', padding: '6px 12px', borderRadius: '20px' }}>
-                    {players.length} Người chơi
+                
+                <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+                    <div style={{ position: 'relative' }}>
+                        <input
+                            type="text"
+                            placeholder="Tìm tên hoặc USERAD..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            style={{
+                                background: '#1e2337',
+                                border: '2px solid var(--primary-neon)',
+                                color: 'white',
+                                padding: '10px 16px 10px 40px',
+                                borderRadius: '20px',
+                                fontSize: '0.9rem',
+                                width: '250px',
+                                outline: 'none',
+                                boxShadow: '0 0 10px rgba(0, 242, 255, 0.05)'
+                            }}
+                        />
+                        <Star size={16} color="var(--primary-neon)" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)' }} />
+                    </div>
+                    <div style={{ fontSize: '0.9rem', color: 'var(--text-dim)', background: 'rgba(255,255,255,0.05)', padding: '6px 12px', borderRadius: '20px' }}>
+                        {filteredPlayers.length} Người chơi
+                    </div>
                 </div>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {players.map((player, index) => (
+                {filteredPlayers.map((player, index) => (
                     <motion.div
                         key={player.id}
                         initial={{ opacity: 0, scale: 0.95 }}

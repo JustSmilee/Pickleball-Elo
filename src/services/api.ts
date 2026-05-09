@@ -91,10 +91,10 @@ export const matchService = {
             .from('matches')
             .select(`
         *,
-        p1:team1_player1_id(name),
-        p1b:team1_player2_id(name),
-        p2:team2_player1_id(name),
-        p2b:team2_player2_id(name)
+        p1:team1_player1_id(name, user_ad),
+        p1b:team1_player2_id(name, user_ad),
+        p2:team2_player1_id(name, user_ad),
+        p2b:team2_player2_id(name, user_ad)
       `)
             .order('created_at', { ascending: false });
 
@@ -164,10 +164,10 @@ export const matchService = {
             .from('matches')
             .select(`
                 *,
-                p1:team1_player1_id(name),
-                p1b:team1_player2_id(name),
-                p2:team2_player1_id(name),
-                p2b:team2_player2_id(name)
+                p1:team1_player1_id(name, user_ad),
+                p1b:team1_player2_id(name, user_ad),
+                p2:team2_player1_id(name, user_ad),
+                p2b:team2_player2_id(name, user_ad)
             `)
             .or(`team1_player1_id.eq.${playerId},team1_player2_id.eq.${playerId},team2_player1_id.eq.${playerId},team2_player2_id.eq.${playerId}`)
             .order('created_at', { ascending: false });
