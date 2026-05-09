@@ -60,9 +60,19 @@ export const MatchForm: React.FC<MatchFormProps> = ({ onSuccess, onCancel, editi
         if (s1 === '' || s2 === '') return alert('Vui lòng nhập tỷ số');
 
         const selectedIds = [p1, p2];
-        if (matchType === 'doubles') selectedIds.push(p1b, p2b);
+        if (matchType === 'doubles') {
+            selectedIds.push(p1b, p2b);
+        }
 
-        if (selectedIds.some(id => !id)) return alert('Vui lòng chọn đầy đủ người chơi');
+        // Filter out empty IDs and check for duplicates
+        const activeIds = selectedIds.filter(id => !!id);
+        if (activeIds.length !== new Set(activeIds).size) {
+            return alert('Một người chơi không thể xuất hiện 2 lần trong cùng một trận đấu');
+        }
+
+        if (activeIds.length < (matchType === 'singles' ? 2 : 4)) {
+            return alert('Vui lòng chọn đầy đủ người chơi');
+        }
 
         setSubmitting(true);
         try {
