@@ -126,7 +126,7 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ onViewProfile }) => {
                                         </span>
                                     )}
                                 </div>
-                                {player.current_streak && player.current_streak > 0 && (
+                                {player.current_streak !== undefined && player.current_streak >= 2 && (
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#FF4500', fontSize: '0.7rem', fontWeight: 900 }}>
                                         🔥 {player.current_streak} CHUỖI THẮNG
                                     </div>
