@@ -30,7 +30,7 @@ async function showMenu(chatId: number) {
         inline_keyboard: [
             [{ text: "🏆 Bảng Xếp Hạng", callback_data: "intent:GET_LEADERBOARD" }, { text: "👤 Chỉ Số Của Tôi", callback_data: "intent:MY_STATS" }],
             [{ text: "⚖️ Chia Đội (4 người)", callback_data: "hint:BALANCE" }, { text: "🔮 Dự Đoán Tỉ Lệ", callback_data: "hint:PREDICT" }],
-            [{ text: "🌐 Mở Trang Web", url: SUPABASE_URL }]
+            [{ text: "🌐 Mở Trang Web", url: "https://pickleball-elo.vercel.app/" }]
         ]
     }
     await sendMessage(chatId, "🎾 <b>Pickleball Bot Menu</b>\nBạn muốn làm gì hôm nay?", menu)
@@ -41,7 +41,7 @@ async function handleIntent(chatId: number, intent: string, analysis: any, playe
     if (intent === "GET_LEADERBOARD") {
         const top = [...players].sort((a, b) => b.elo_rating - a.elo_rating).slice(0, 10)
         const list = top.map((p, i) => `${i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : i + 1 + "."} <b>${p.name}</b>: <code>${p.elo_rating}</code> (${p.wins}W-${p.losses || 0}L)`).join("\n")
-        await sendMessage(chatId, `🏆 <b>Bảng Xếp Hạng:</b>\n\n${list}\n\n<a href="${SUPABASE_URL}">Xem chi tiết trên Web</a>`)
+        await sendMessage(chatId, `🏆 <b>Bảng Xếp Hạng:</b>\n\n${list}\n\n<a href="https://pickleball-elo.vercel.app/">Xem chi tiết trên Web</a>`)
         return
     }
 
