@@ -69,17 +69,18 @@ export const History: React.FC<HistoryProps> = ({ onEdit }) => {
 
     return (
         <div className="fade-in" style={{ maxWidth: '800px', margin: '0 auto' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-                <h2 className="neon-text heading-font" style={{ fontSize: '2rem', display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div className="history-header">
+                <h2 className="neon-text heading-font history-title" style={{ fontSize: '2rem', display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <Clock color="var(--primary-neon)" /> Lịch sử trận đấu
                 </h2>
-                <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                    <div style={{ position: 'relative' }}>
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }} className="search-wrapper">
+                    <div style={{ position: 'relative', flex: 1 }}>
                         <input
                             type="text"
-                            placeholder="Tìm kiếm vận động viên..."
+                            placeholder="Tìm vận động viên..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
+                            className="search-input-history"
                             style={{
                                 background: '#1e2337',
                                 border: '2px solid var(--primary-neon)',
@@ -95,8 +96,8 @@ export const History: React.FC<HistoryProps> = ({ onEdit }) => {
                         />
                         <Users size={18} color="var(--primary-neon)" style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)' }} />
                     </div>
-                    <div style={{ fontSize: '0.9rem', color: 'var(--text-dim)', background: 'rgba(255,255,255,0.05)', padding: '6px 12px', borderRadius: '20px' }}>
-                        {filteredMatches.length} Trận đấu
+                    <div style={{ fontSize: '0.9rem', color: 'var(--text-dim)', background: 'rgba(255,255,255,0.05)', padding: '6px 12px', borderRadius: '20px', whiteSpace: 'nowrap' }}>
+                        {filteredMatches.length} Trận
                     </div>
                 </div>
             </div>
@@ -115,7 +116,7 @@ export const History: React.FC<HistoryProps> = ({ onEdit }) => {
                                 animate={{ opacity: 1, scale: 1 }}
                                 exit={{ opacity: 0, x: -20 }}
                                 transition={{ delay: index * 0.05 }}
-                                className="glass-card hover-row"
+                                className="glass-card hover-row history-item-card"
                                 style={{ padding: '28px', position: 'relative', opacity: isDeleting === match.id ? 0.5 : 1, borderRadius: '28px' }}
                             >
                                 {/* Actions (All matches) */}
@@ -205,7 +206,27 @@ export const History: React.FC<HistoryProps> = ({ onEdit }) => {
             </div>
 
             <style>{`
+        .history-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 2rem;
+          gap: 20px;
+        }
         @media (max-width: 768px) {
+          .history-header {
+            flex-direction: column;
+            align-items: flex-start;
+          }
+          .history-title {
+            font-size: 1.5rem !important;
+          }
+          .search-wrapper {
+            width: 100% !important;
+          }
+          .search-input-history {
+            width: 100% !important;
+          }
           .match-grid {
             grid-template-columns: 1fr !important;
             gap: 16px !important;
@@ -215,12 +236,13 @@ export const History: React.FC<HistoryProps> = ({ onEdit }) => {
           .match-grid > div:nth-child(1) { order: 2; }
           .match-grid > div:nth-child(2) { order: 1; }
           .match-grid > div:nth-child(3) { order: 3; }
-          .player-name { fontSize: 1.2rem !important; }
+          .player-name { font-size: 1.2rem !important; }
           .score-box { padding: 10px 20px !important; font-size: 1.5rem !important; }
+          .history-item-card {
+            padding: 20px !important;
+          }
         }
       `}</style>
         </div>
-    );
-};
     );
 };

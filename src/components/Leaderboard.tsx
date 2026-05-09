@@ -48,13 +48,13 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ onViewProfile }) => {
 
     return (
         <div className="fade-in glass-card leaderboard-container" style={{ padding: '32px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', flexWrap: 'wrap', gap: '20px' }}>
-                <h2 className="neon-text heading-font" style={{ fontSize: '2rem', display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div className="leaderboard-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', flexWrap: 'wrap', gap: '20px' }}>
+                <h2 className="neon-text heading-font leaderboard-title" style={{ fontSize: '2rem', display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <Star color="var(--primary-neon)" fill="var(--primary-neon)" /> Bảng xếp hạng
                 </h2>
                 
-                <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-                    <div style={{ position: 'relative' }}>
+                <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }} className="search-container">
+                    <div style={{ position: 'relative', flex: 1 }}>
                         <input
                             type="text"
                             placeholder="Tìm tên hoặc USERAD..."
@@ -75,7 +75,7 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ onViewProfile }) => {
                         />
                         <Star size={16} color="var(--primary-neon)" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)' }} />
                     </div>
-                    <div style={{ fontSize: '0.9rem', color: 'var(--text-dim)', background: 'rgba(255,255,255,0.05)', padding: '6px 12px', borderRadius: '20px' }}>
+                    <div className="player-count" style={{ fontSize: '0.9rem', color: 'var(--text-dim)', background: 'rgba(255,255,255,0.05)', padding: '6px 12px', borderRadius: '20px', whiteSpace: 'nowrap' }}>
                         {filteredPlayers.length} Người chơi
                     </div>
                 </div>
@@ -119,7 +119,7 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ onViewProfile }) => {
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                                    <span style={{ fontWeight: 800, fontSize: '1.15rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{player.name}</span>
+                                    <span className="player-name" style={{ fontWeight: 800, fontSize: '1.15rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{player.name}</span>
                                     {player.user_ad && (
                                         <span style={{ fontSize: '0.7rem', color: 'var(--primary-neon)', background: 'rgba(0, 242, 255, 0.1)', padding: '2px 6px', borderRadius: '8px', fontWeight: 700 }}>
                                             @{player.user_ad}
@@ -176,20 +176,41 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ onViewProfile }) => {
 
             <style>{`
         .leaderboard-grid-row {
-          grid-template-columns: 50px 1fr 80px 140px 60px;
+          grid-template-columns: 50px 1fr 100px 140px 60px;
         }
         @media (max-width: 768px) {
-          .leaderboard-container { padding: 16px 12px !important; }
+          .leaderboard-container { 
+            padding: 20px 12px !important; 
+            border-radius: 20px !important;
+          }
           .leaderboard-grid-row { 
-            grid-template-columns: 25px 1fr 55px 40px !important;
-            padding: 12px 8px !important;
-            gap: 6px !important;
+            grid-template-columns: 30px 1fr 60px 44px !important;
+            padding: 14px 10px !important;
+            gap: 10px !important;
+            border-radius: 16px !important;
+          }
+          .leaderboard-header {
+            flex-direction: column !important;
+            align-items: flex-start !important;
+            gap: 16px !important;
+          }
+          .leaderboard-title {
+            font-size: 1.5rem !important;
           }
           .hide-mobile { display: none !important; }
           .player-avatar { display: none !important; }
-          .player-name { font-size: 0.95rem !important; }
+          .player-name { font-size: 0.9rem !important; }
+          .elo-text { font-size: 1.1rem !important; }
+          .search-container { width: 100% !important; }
+          .search-input { width: 100% !important; height: 44px !important; }
+          .player-count { font-size: 0.8rem !important; }
+        }
+        @media (max-width: 360px) {
+           .leaderboard-grid-row { 
+            grid-template-columns: 24px 1fr 50px 36px !important;
+            gap: 6px !important;
+          }
           .elo-text { font-size: 1rem !important; }
-          .search-input { width: 100% !important; }
         }
       `}</style>
         </div>

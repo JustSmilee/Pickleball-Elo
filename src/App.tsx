@@ -207,9 +207,9 @@ function App() {
           className="glass-card mobile-nav"
           style={{
             display: 'flex',
-            justifyContent: 'space-around',
-            padding: '12px 8px calc(12px + var(--safe-bottom))',
-            borderRadius: '32px 32px 0 0',
+            justifyContent: 'space-between',
+            padding: '8px 4px calc(12px + var(--safe-bottom))',
+            borderRadius: '24px 24px 0 0',
             borderBottom: 'none'
           }}
         >
@@ -217,31 +217,47 @@ function App() {
             <button
               key={item.id}
               onClick={() => setActiveTab(item.id)}
+              className={`nav-item ${activeTab === item.id ? 'active' : ''}`}
               style={{
                 background: 'none',
                 border: 'none',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
-                gap: '4px',
+                gap: '2px',
                 color: activeTab === item.id ? 'var(--primary-neon)' : 'var(--text-dim)',
                 transition: 'all 0.3s ease',
-                width: '60px'
+                flex: '1',
+                minWidth: 0,
+                padding: '4px 2px'
               }}
             >
               <div
+                className="nav-icon-wrapper"
                 style={{
                   padding: '8px',
-                  borderRadius: '16px',
+                  borderRadius: '12px',
                   background: activeTab === item.id ? 'hsla(var(--primary-neon-h), 100%, 50%, 0.1)' : 'transparent',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center'
+                  justifyContent: 'center',
+                  marginBottom: '2px'
                 }}
               >
-                <item.icon size={22} strokeWidth={activeTab === item.id ? 2.5 : 2} />
+                <item.icon size={20} strokeWidth={activeTab === item.id ? 2.5 : 2} />
               </div>
-              <span style={{ fontSize: '0.65rem', fontWeight: 700, fontFamily: 'var(--font-cute)' }}>{item.label}</span>
+              <span style={{ 
+                fontSize: '0.6rem', 
+                fontWeight: 700, 
+                fontFamily: 'var(--font-cute)',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                width: '100%',
+                textAlign: 'center'
+              }}>
+                {item.label}
+              </span>
             </button>
           ))}
         </div>
@@ -260,8 +276,24 @@ function App() {
             left: 0;
             right: 0;
             z-index: 1000;
+            background: rgba(15, 17, 26, 0.8);
+            backdrop-filter: blur(10px);
           }
-          .neon-text { font-size: 3.5rem !important; }
+          .neon-text { font-size: 3rem !important; }
+          
+          .container {
+            padding-left: 12px !important;
+            padding-right: 12px !important;
+          }
+        }
+
+        @media (max-width: 380px) {
+          .nav-item span {
+            font-size: 0.55rem !important;
+          }
+          .nav-icon-wrapper {
+            padding: 6px !important;
+          }
         }
       `}</style>
     </div>
