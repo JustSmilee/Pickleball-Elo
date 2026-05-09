@@ -12,10 +12,14 @@ interface PlayerProfileProps {
 
 export const PlayerProfile: React.FC<PlayerProfileProps> = ({ player, onClose }) => {
     const [trend, setTrend] = useState<{ date: string, elo: number }[]>([]);
+    const [streak, setStreak] = useState(0);
 
     useEffect(() => {
         playerService.getPlayerEloTrend(player.id).then(data => {
             setTrend(data);
+        });
+        playerService.calculateWinStreak(player.id).then(s => {
+            setStreak(s);
         });
     }, [player.id]);
 
@@ -51,6 +55,11 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({ player, onClose })
                             </div>
                             <div>
                                 <h2 className="heading-font" style={{ fontSize: '3rem', marginBottom: '4px', lineHeight: 1 }}>{player.name}</h2>
+                                {player.user_ad && (
+                                    <div style={{ color: 'var(--text-dim)', fontSize: '1rem', fontWeight: 600, marginBottom: '8px' }}>
+                                        MBBANK: @{player.user_ad}
+                                    </div>
+                                )}
                                 <div style={{ color: 'var(--primary-neon)', fontWeight: 800, fontSize: '1.4rem', fontFamily: 'var(--font-heading)', marginTop: '8px' }}>{player.elo_rating} ELO</div>
                             </div>
                         </div>
@@ -69,6 +78,12 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({ player, onClose })
                                     <Target size={16} /> TRẬN ĐẤU
                                 </div>
                                 <div style={{ fontSize: '1.8rem', fontWeight: 900, color: 'white', fontFamily: 'var(--font-heading)' }}>{player.matches_played}</div>
+                            </div>
+                            <div className="glass-card" style={{ padding: '24px', background: 'rgba(255,255,255,0.03)', borderRadius: '24px', gridColumn: 'span 2' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-dim)', fontSize: '0.75rem', marginBottom: '10px', fontWeight: 700, letterSpacing: '0.05em' }}>
+                                    🔥 CHUỖI THẮNG HIỆN TẠI
+                                </div>
+                                <div style={{ fontSize: '1.8rem', fontWeight: 900, color: '#FF4500', fontFamily: 'var(--font-heading)' }}>{streak} TRẬN</div>
                             </div>
                         </div>
                     </div>

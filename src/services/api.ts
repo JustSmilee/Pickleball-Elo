@@ -56,6 +56,31 @@ export const playerService = {
         });
 
         return history;
+    },
+
+    async calculateWinStreak(playerId: string): Promise<number> {
+        if (!supabase) return 0;
+        const { data, error } = await supabase
+            .from('matches')
+            .select('*')
+            .or(`team1_player1_id.eq.${playerId},team1_player2_id.eq.${playerId},team2_player1_id.eq.${playerId},team2_player2_id.eq.${playerId}`)
+            .order('created_at', { ascending: false });
+
+        if (error || !data) return 0;
+
+        let streak = 0;
+        for (const match of data) {
+            const isTeam1 = [match.team1_player1_id, match.team1_player2_id].includes(playerId);
+            const team1Won = match.team1_score > match.team2_score;
+            const won = (isTeam1 && team1Won) || (!isTeam1 && !team1Won);
+
+            if (won) {
+                streak++;
+            } else {
+                break;
+            }
+        }
+        return streak;
     }
 };
 

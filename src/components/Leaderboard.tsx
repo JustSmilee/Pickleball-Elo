@@ -13,10 +13,16 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ onViewProfile }) => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        playerService.getAllPlayers().then(data => {
-            setPlayers(data);
+        const fetchData = async () => {
+            const data = await playerService.getAllPlayers();
+            const playersWithStreaks = await Promise.all(data.map(async (p) => {
+                const streak = await playerService.calculateWinStreak(p.id);
+                return { ...p, current_streak: streak };
+            }));
+            setPlayers(playersWithStreaks);
             setLoading(false);
-        });
+        };
+        fetchData();
     }, []);
 
     const getRankIcon = (index: number) => {
@@ -78,7 +84,14 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ onViewProfile }) => {
                             }}>
                                 <User size={24} color="var(--primary-neon)" />
                             </div>
-                            <span style={{ fontWeight: 800, fontSize: '1.15rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{player.name}</span>
+                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                <span style={{ fontWeight: 800, fontSize: '1.15rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{player.name}</span>
+                                {player.current_streak && player.current_streak >= 2 && (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#FF4500', fontSize: '0.7rem', fontWeight: 900 }}>
+                                        🔥 {player.current_streak} CHUỖI THẮNG
+                                    </div>
+                                )}
+                            </div>
                         </div>
 
                         <div style={{ textAlign: 'right' }}>

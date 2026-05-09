@@ -1,11 +1,13 @@
 export interface Player {
   id: string;
   name: string;
+  user_ad?: string;
   elo_rating: number;
   matches_played: number;
   wins: number;
   losses: number;
   avatar_url?: string;
+  current_streak?: number;
 }
 
 export interface Match {

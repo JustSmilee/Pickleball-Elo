@@ -274,6 +274,81 @@ export const MatchForm: React.FC<MatchFormProps> = ({ onSuccess, onCancel, editi
                     </motion.div>
                 </div>
 
+                {/* Elo Preview Section */}
+                {(p1 && p2 && (matchType === 'singles' || (p1b && p2b)) && s1 !== '' && s2 !== '') && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="glass-card"
+                        style={{
+                            padding: '20px',
+                            background: 'rgba(255, 255, 255, 0.03)',
+                            border: '1px solid var(--glass-border)',
+                            textAlign: 'center',
+                            borderRadius: '24px'
+                        }}
+                    >
+                        <h4 style={{ color: 'var(--text-dim)', fontSize: '0.9rem', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                            Dự kiến thay đổi Elo
+                        </h4>
+                        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '40px' }}>
+                            <div style={{ textAlign: 'center' }}>
+                                <div style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>Team A</div>
+                                <div style={{
+                                    fontSize: '1.8rem',
+                                    fontWeight: 800,
+                                    color: Number(s1) > Number(s2) ? 'var(--primary-neon)' : (Number(s1) < Number(s2) ? '#ff4d4d' : 'white')
+                                }}>
+                                    {Number(s1) > Number(s2) ? '+' : ''}{(() => {
+                                        let delta = 0;
+                                        if (matchType === 'singles') {
+                                            const player1 = players.find(p => p.id === p1)!;
+                                            const player2 = players.find(p => p.id === p2)!;
+                                            delta = calculateEloDelta(player1.elo_rating, player2.elo_rating, Number(s1), Number(s2));
+                                        } else {
+                                            const player1a = players.find(p => p.id === p1)!;
+                                            const player1b_data = players.find(p => p.id === p1b)!;
+                                            const player2a = players.find(p => p.id === p2)!;
+                                            const player2b_data = players.find(p => p.id === p2b)!;
+                                            const team1Avg = (player1a.elo_rating + player1b_data.elo_rating) / 2;
+                                            const team2Avg = (player2a.elo_rating + player2b_data.elo_rating) / 2;
+                                            delta = calculateEloDelta(team1Avg, team2Avg, Number(s1), Number(s2));
+                                        }
+                                        return delta;
+                                    })()}
+                                </div>
+                            </div>
+                            <div style={{ fontSize: '1.5rem', color: 'var(--text-dim)', fontWeight: 300 }}>vs</div>
+                            <div style={{ textAlign: 'center' }}>
+                                <div style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>Team B</div>
+                                <div style={{
+                                    fontSize: '1.8rem',
+                                    fontWeight: 800,
+                                    color: Number(s2) > Number(s1) ? 'var(--secondary-neon)' : (Number(s2) < Number(s1) ? '#ff4d4d' : 'white')
+                                }}>
+                                    {Number(s2) > Number(s1) ? '+' : ''}{(() => {
+                                        let delta = 0;
+                                        if (matchType === 'singles') {
+                                            const player1 = players.find(p => p.id === p1)!;
+                                            const player2 = players.find(p => p.id === p2)!;
+                                            delta = calculateEloDelta(player1.elo_rating, player2.elo_rating, Number(s1), Number(s2));
+                                        } else {
+                                            const player1a = players.find(p => p.id === p1)!;
+                                            const player1b_data = players.find(p => p.id === p1b)!;
+                                            const player2a = players.find(p => p.id === p2)!;
+                                            const player2b_data = players.find(p => p.id === p2b)!;
+                                            const team1Avg = (player1a.elo_rating + player1b_data.elo_rating) / 2;
+                                            const team2Avg = (player2a.elo_rating + player2b_data.elo_rating) / 2;
+                                            delta = calculateEloDelta(team1Avg, team2Avg, Number(s1), Number(s2));
+                                        }
+                                        return -delta;
+                                    })()}
+                                </div>
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+
                 <button type="submit" disabled={submitting} className="neon-btn" style={{ height: '72px', fontSize: '1.2rem', marginTop: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', opacity: submitting ? 0.5 : 1, borderRadius: '24px' }}>
                     {submitting ? 'Đang lưu...' : editingMatch ? 'Cập nhật trận đấu' : 'Lưu kết quả & tính điểm'} <ArrowRight size={24} />
                 </button>
