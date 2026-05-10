@@ -7,6 +7,7 @@ import { History } from './components/History';
 import { PlayerProfile } from './components/PlayerProfile';
 import { Compare } from './components/Compare';
 import { Tournaments } from './components/Tournaments';
+import { InstallPrompt } from './components/InstallPrompt';
 import { matchService } from './services/api';
 import { LayoutDashboard, Trophy, List, PlusCircle, Users, BarChart } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -261,6 +262,7 @@ function App() {
             </button>
           ))}
         </div>
+        <InstallPrompt />
       </div>
 
       <style>{`

@@ -37,6 +37,15 @@ async function showMenu(chatId: number) {
 }
 
 async function handleIntent(chatId: number, intent: string, analysis: any, players: any[]) {
+    const resolvePlayer = (name: string) => {
+        if (!name) return null;
+        const tgt = name.toLowerCase().trim().replace(/^@/, '');
+        return players.find(p => 
+            p.name.toLowerCase().trim() === tgt || 
+            (p.user_ad && p.user_ad.toLowerCase().trim() === tgt)
+        );
+    };
+
     // --- INTENT: GET_LEADERBOARD ---
     if (intent === "GET_LEADERBOARD") {
         const top = [...players].sort((a, b) => b.elo_rating - a.elo_rating).slice(0, 10)
@@ -47,11 +56,7 @@ async function handleIntent(chatId: number, intent: string, analysis: any, playe
 
     // --- INTENT: GET_PLAYER_STATS ---
     if (intent === "GET_PLAYER_STATS") {
-        const tgt = analysis.target?.toLowerCase().trim()
-        const p = players.find(pl => 
-            pl.name.toLowerCase().trim() === tgt || 
-            (pl.user_ad && pl.user_ad.toLowerCase().trim() === tgt)
-        )
+        const p = resolvePlayer(analysis.target)
         if (!p) {
             await sendMessage(chatId, `❌ Không thấy người chơi <b>"${analysis.target}"</b>.`)
             return
@@ -67,13 +72,8 @@ async function handleIntent(chatId: number, intent: string, analysis: any, playe
 
     // --- INTENT: QUERY_H2H ---
     if (intent === "QUERY_H2H") {
-        const n1 = analysis.p1?.toLowerCase().trim(), n2 = analysis.p2?.toLowerCase().trim()
-        const findP = (name: string) => players.find(pl => 
-            pl.name.toLowerCase().trim() === name || 
-            (pl.user_ad && pl.user_ad.toLowerCase().trim() === name)
-        )
-        const p1 = findP(n1)
-        const p2 = findP(n2)
+        const p1 = resolvePlayer(analysis.p1)
+        const p2 = resolvePlayer(analysis.p2)
         if (!p1 || !p2) {
             await sendMessage(chatId, `❌ Không thấy người chơi cần tìm.`)
             return
@@ -88,11 +88,7 @@ async function handleIntent(chatId: number, intent: string, analysis: any, playe
 
     // --- INTENT: BALANCE_TEAMS ---
     if (intent === "BALANCE_TEAMS") {
-        const names = (analysis.players || []).map((n: string) => n.toLowerCase().trim().replace(/^@/, ''))
-        const resolved = names.map((n: string) => players.find(p => 
-            p.name.toLowerCase().trim() === n || 
-            (p.user_ad && p.user_ad.toLowerCase().trim() === n)
-        )).filter(Boolean)
+        const resolved = (analysis.players || []).map((n: string) => resolvePlayer(n)).filter(Boolean)
         
         if (resolved.length < 4) {
             await sendMessage(chatId, `❌ Cần ít nhất 4 người để chia đội. Vui lòng ghi đúng tên hoặc @userad.`)
@@ -111,8 +107,8 @@ async function handleIntent(chatId: number, intent: string, analysis: any, playe
 
     // --- INTENT: PREDICT_MATCH ---
     if (intent === "PREDICT_MATCH") {
-        const resolve = (names: string[]) => (names || []).map(n => players.find(p => p.name.toLowerCase().trim() === n.toLowerCase().trim())).filter(Boolean)
-        const t1 = resolve(analysis.team1), t2 = resolve(analysis.team2)
+        const t1 = (analysis.team1 || []).map((n: string) => resolvePlayer(n)).filter(Boolean)
+        const t2 = (analysis.team2 || []).map((n: string) => resolvePlayer(n)).filter(Boolean)
         if (t1.length === 0 || t2.length === 0) {
             await sendMessage(chatId, "❌ Không đủ thông tin 2 đội.")
             return
@@ -126,15 +122,9 @@ async function handleIntent(chatId: number, intent: string, analysis: any, playe
     // --- INTENT: RECORD_MATCH ---
     if (intent === "RECORD_MATCH") {
         const { team1, team2, score1, score2, tournament } = analysis
-        const resolve = (names: string[]) => (names || []).map(n => {
-            const tgt = n.toLowerCase().trim().replace(/^@/, '')
-            return players.find(p => 
-                p.name.toLowerCase().trim() === tgt || 
-                (p.user_ad && p.user_ad.toLowerCase().trim() === tgt)
-            )
-        }).filter(Boolean)
+        const res1 = (team1 || []).map((n: string) => resolvePlayer(n)).filter(Boolean)
+        const res2 = (team2 || []).map((n: string) => resolvePlayer(n)).filter(Boolean)
         
-        const res1 = resolve(team1), res2 = resolve(team2)
         if (res1.length === 0 || res2.length === 0) {
             await sendMessage(chatId, `❌ Không xác định được người chơi. Vui lòng kiểm tra lại tên hoặc @userad.`)
             return
@@ -167,7 +157,7 @@ async function handleIntent(chatId: number, intent: string, analysis: any, playe
         for (const p of res1) await supabase.from("players").update({ elo_rating: p.elo_rating + delta, wins: score1 > score2 ? (p.wins || 0) + 1 : p.wins, losses: score2 > score1 ? (p.losses || 0) + 1 : p.losses, matches_played: (p.matches_played || 0) + 1 }).eq("id", p.id)
         for (const p of res2) await supabase.from("players").update({ elo_rating: p.elo_rating - delta, wins: score2 > score1 ? (p.wins || 0) + 1 : p.wins, losses: score1 > score2 ? (p.losses || 0) + 1 : p.losses, matches_played: (p.matches_played || 0) + 1 }).eq("id", p.id)
         
-        await sendMessage(chatId, `✅ <b>Ghi nhận thành công!</b>\n🏆 <b>${score1 > score2 ? team1.join(" & ") : team2.join(" & ")}</b> thắng.\n📈 Elo: <code>${delta > 0 ? "+" : ""}${delta}</code>\n${tournamentId ? `🏟️ Giải đấu: <i>${tournament}</i>` : ""}`)
+        await sendMessage(chatId, `✅ <b>Ghi nhận thành công!</b>\n🏆 <b>${score1 > score2 ? res1.map(p => p.name).join(" & ") : res2.map(p => p.name).join(" & ")}</b> thắng.\n📈 Elo: <code>${delta > 0 ? "+" : ""}${delta}</code>\n${tournamentId ? `🏟️ Giải đấu: <i>${tournament}</i>` : ""}`)
     }
 }
 
@@ -178,7 +168,7 @@ async function getLlmAnalysis(text: string, players: any[]) {
     const tContext = tournaments?.map(t => t.name).join(", ") || "None"
     const playerContext = players.map(p => `${p.name}${p.user_ad ? ` (@${p.user_ad})` : ''}`).join(", ")
 
-    const prompt = `You are a Pickleball Tournament Assistant. Extract match details from the message.
+    const prompt = `You are a Pickleball Tournament Assistant. Extract match details or user intent from the message.
     
     CONTEXT:
     - Available Players: ${playerContext}
@@ -195,12 +185,12 @@ async function getLlmAnalysis(text: string, players: any[]) {
     6. PREDICT_MATCH: {"intent": "PREDICT_MATCH", "team1": [], "team2": []}
     
     CRITICAL RULES:
-    - If multiple players have the same name, use their @USERAD to disambiguate.
-    - Match names/USERADs exactly to the provided Available Players list.
-    - If the message says "Nguyễn Mạnh Thắng 8" or "Thắng 8", match to the one with user_ad '8'.
-    - Return ONLY JSON.`;
+    - If the user mentions a name or @USERAD, match it exactly to the 'Available Players' list.
+    - If the user asks for "chỉ số", "stats", "điểm", use GET_PLAYER_STATS.
+    - If the user mentions two people with 'vs' or 'đấu với' or 'so sánh', use QUERY_H2H.
+    - Return ONLY raw JSON without markdown blocks.`;
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
     try {
         const response = await fetch(url, { 
             method: "POST", 
@@ -214,52 +204,104 @@ async function getLlmAnalysis(text: string, players: any[]) {
         }
         const raw = data.candidates[0].content.parts[0].text;
         const jsonMatch = raw.match(/\{[\s\S]*\}/);
-        return jsonMatch ? JSON.parse(jsonMatch[0]) : { error: "No JSON found" };
+        if (!jsonMatch) return { error: "No JSON found" };
+        try {
+            return JSON.parse(jsonMatch[0]);
+        } catch (e) {
+            return { error: "JSON Parse Error" };
+        }
     } catch (e) { 
         console.error("Fetch/Parse Error:", e);
-        return { error: "Parse Error" }; 
+        return { error: "Fetch Error" }; 
     }
 }
 
 serve(async (req) => {
-    // Health check for browser
+    // Health check
     if (req.method === "GET") return new Response("Pickleball Bot is running!", { status: 200 });
 
     try {
-        const body = await req.json()
-        const { data: players } = await supabase.from("players").select("*")
+        const body = await req.json();
+        console.log("Received body:", JSON.stringify(body));
 
-        if (body.callback_query) {
-            const cb = body.callback_query, chatId = cb.message.chat.id, data = cb.data
-            if (data.startsWith("intent:")) {
-                const intent = data.split(":")[1]
-                if (intent === "GET_LEADERBOARD") await handleIntent(chatId, intent, {}, players!)
-                else await sendMessage(chatId, "💡 Tính năng này yêu cầu bạn gõ lệnh cụ thể.")
-            } else if (data.startsWith("hint:")) {
-                const hint = data.split(":")[1]
-                await sendMessage(chatId, hint === "BALANCE" ? "💡 Gõ: <i>'chia đội cho A, B, C, D'</i>" : "💡 Gõ: <i>'dự đoán A-B vs C-D'</i>")
-            }
-            return new Response("ok")
+        const message = body.message || (body.callback_query ? body.callback_query.message : null);
+        if (!message) return new Response("ok");
+        const chatId = message.chat.id;
+
+        // Fetch players once
+        const { data: players, error: dbErr } = await supabase.from("players").select("*");
+        if (dbErr || !players) {
+            console.error("DB Error:", dbErr);
+            await sendMessage(chatId, "❌ Lỗi kết nối dữ liệu. Vui lòng thử lại sau.");
+            return new Response("ok");
         }
 
-        const message = body.message
-        if (!message || !message.text) return new Response("ok")
-        const chatId = message.chat.id, text = message.text.toLowerCase().trim()
+        if (body.callback_query) {
+            const cb = body.callback_query, data = cb.data;
+            if (data.startsWith("intent:")) {
+                const intent = data.split(":")[1];
+                if (intent === "GET_LEADERBOARD") {
+                    await handleIntent(chatId, intent, {}, players);
+                } else if (intent === "MY_STATS") {
+                    await sendMessage(chatId, "💡 <b>Cách xem chỉ số:</b>\n\nBạn hãy gõ tên hoặc @userad của mình.\nVí dụ: <i>'chỉ số của @anhph9'</i> hoặc chỉ cần gõ <i>'@anhph9'</i>.\n\nBot sẽ tự động nhận diện và hiển thị điểm Elo cùng các huy chương của bạn!");
+                } else {
+                    await sendMessage(chatId, "💡 Tính năng này yêu cầu bạn gõ lệnh cụ thể.");
+                }
+            } else if (data.startsWith("hint:")) {
+                const hint = data.split(":")[1];
+                await sendMessage(chatId, hint === "BALANCE" ? "💡 Gõ: <i>'chia đội cho A, B, C, D'</i>" : "💡 Gõ: <i>'dự đoán A-B vs C-D'</i>");
+            }
+            return new Response("ok");
+        }
+
+        if (!message.text) return new Response("ok");
+        const text = message.text.toLowerCase().trim();
 
         if (text === "/start" || text === "/menu" || text === "menu") { await showMenu(chatId); return new Response("ok"); }
         if (text === "/ping") { await sendMessage(chatId, "🏓 <b>Pong!</b> Bot đang hoạt động."); return new Response("ok"); }
 
-        console.log("Analyzing message:", message.text)
-        const analysis = await getLlmAnalysis(message.text, players!)
-        console.log("AI Analysis:", JSON.stringify(analysis))
+        console.log("Analyzing message:", text);
+
+        // --- HYBRID PARSING: Check for simple commands first to save AI quota ---
+        
+        // 1. Leaderboard
+        if (/^(bxh|bảng xếp hạng|top|ranking)$/i.test(text)) {
+            await handleIntent(chatId, "GET_LEADERBOARD", {}, players);
+            return new Response("ok");
+        }
+
+        // 2. Player Stats (e.g. "@anhph9", "chỉ số anhph9", "stats Nam")
+        const statsMatch = text.match(/^(?:chỉ số|stats|điểm|info)\s+(.+)$/i) || text.match(/^(@[a-zA-Z0-9._-]+)$/i);
+        if (statsMatch) {
+            const target = statsMatch[1] || statsMatch[2] || statsMatch[3];
+            await handleIntent(chatId, "GET_PLAYER_STATS", { target }, players);
+            return new Response("ok");
+        }
+
+        // 3. H2H (e.g. "Nam vs Bắc", "so sánh Nam và Bắc")
+        const h2hMatch = text.match(/^(.+)\s+vs\s+(.+)$/i) || text.match(/^so sánh\s+(.+)\s+(?:và|với)\s+(.+)$/i);
+        if (h2hMatch) {
+            await handleIntent(chatId, "QUERY_H2H", { p1: h2hMatch[1], p2: h2hMatch[2] }, players);
+            return new Response("ok");
+        }
+
+        // --- FALLBACK: Use AI for complex natural language requests ---
+        const analysis = await getLlmAnalysis(message.text, players);
+        console.log("AI Analysis:", JSON.stringify(analysis));
 
         if (!analysis || analysis.error) { 
-            if (text.length > 3) await sendMessage(chatId, "🤔 Bot chưa hiểu ý bạn."); 
+            if (text.length > 3) await sendMessage(chatId, "🤔 Bot chưa hiểu ý bạn hoặc AI đang bận. Vui lòng thử lại sau."); 
             return new Response("ok"); 
         }
-        await handleIntent(chatId, analysis.intent, analysis, players!)
+        await handleIntent(chatId, analysis.intent, analysis, players);
     } catch (err) { 
-        console.error("CRITICAL ERROR:", err) 
+        console.error("CRITICAL ERROR:", err);
+        // Try to notify the user if possible
+        try {
+            const body = await req.json().catch(() => ({}));
+            const chatId = body.message?.chat.id || body.callback_query?.message?.chat.id;
+            if (chatId) await sendMessage(chatId, "🔥 <b>Lỗi hệ thống:</b> Bot đang gặp sự cố kỹ thuật.");
+        } catch (e) { console.error("Could not send error message:", e); }
     }
-    return new Response("ok")
+    return new Response("ok");
 })
