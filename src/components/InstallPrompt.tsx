@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Download, X, Share } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Download, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export const InstallPrompt = () => {
