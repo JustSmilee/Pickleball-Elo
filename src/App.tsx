@@ -11,6 +11,8 @@ import { InstallPrompt } from './components/InstallPrompt';
 import { matchService } from './services/api';
 import { LayoutDashboard, Trophy, List, PlusCircle, Users, BarChart } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Analytics } from '@vercel/analytics/react';
+
 
 const StatsCard = ({ label, value, sub, color = 'var(--primary-neon)' }: { label: string, value: string | number, sub: string, color?: string }) => (
   <motion.div
@@ -298,7 +300,9 @@ function App() {
           }
         }
       `}</style>
+      <Analytics />
     </div>
+
   );
 }
 

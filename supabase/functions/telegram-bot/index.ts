@@ -78,11 +78,38 @@ async function handleIntent(chatId: number, intent: string, analysis: any, playe
             await sendMessage(chatId, `❌ Không thấy người chơi cần tìm.`)
             return
         }
+        
+        // Fetch matches between these two (Singles)
         const { data: matches } = await supabase.from("matches").select("*")
             .or(`and(team1_player1_id.eq.${p1.id},team2_player1_id.eq.${p2.id}),and(team1_player1_id.eq.${p2.id},team2_player1_id.eq.${p1.id})`)
+        
+        const totalMatches = matches?.length || 0
         const p1W = matches?.filter(m => (m.team1_player1_id === p1.id && m.team1_score > m.team2_score) || (m.team2_player1_id === p1.id && m.team2_score > m.team1_score)).length || 0
-        const p2W = (matches?.length || 0) - p1W
-        await sendMessage(chatId, `🤜🤛 <b>${p1.name} vs ${p2.name}</b>\n\nTổng: ${matches?.length || 0} trận\n- <b>${p1.name}</b>: ${p1W} thắng\n- <b>${p2.name}</b>: ${p2W} thắng\n\n${p1W > p2W ? `⭐ ${p1.name} nhỉnh hơn!` : p2W > p1W ? `⭐ ${p2.name} nhỉnh hơn!` : "⚖️ Huề!"}`)
+        const p2W = totalMatches - p1W
+
+        // 1. Prediction based on Elo
+        const probElo = 1 / (1 + Math.pow(10, (p2.elo_rating - p1.elo_rating) / 400))
+        
+        // 2. Prediction based on History (if at least 1 match played)
+        const probHistory = totalMatches > 0 ? p1W / totalMatches : 0.5
+        
+        // 3. Combined Prediction (Weighted: 60% Elo, 40% History if enough matches, else mostly Elo)
+        const weightHistory = Math.min(totalMatches * 0.1, 0.4) // Max 40% weight for history after 4 matches
+        const probCombined = (probElo * (1 - weightHistory)) + (probHistory * weightHistory)
+
+        const getWinEmoji = (p: number) => p > 0.6 ? "🔥" : p > 0.4 ? "⚖️" : "📉"
+
+        await sendMessage(chatId, 
+            `🤜🤛 <b>Đối đầu: ${p1.name} vs ${p2.name}</b>\n\n` +
+            `📊 <b>Lịch sử:</b> ${totalMatches} trận\n` +
+            `- <b>${p1.name}</b>: ${p1W} thắng (${totalMatches > 0 ? Math.round(p1W/totalMatches*100) : 0}%)\n` +
+            `- <b>${p2.name}</b>: ${p2W} thắng (${totalMatches > 0 ? Math.round(p2W/totalMatches*100) : 0}%)\n\n` +
+            `🔮 <b>Dự đoán tỉ lệ thắng:</b>\n` +
+            `• Theo Elo: <code>${(probElo * 100).toFixed(1)}%</code>\n` +
+            `• Theo lịch sử: <code>${(probHistory * 100).toFixed(1)}%</code>\n` +
+            `➡️ <b>Tổng hợp:</b> <b>${(probCombined * 100).toFixed(1)}%</b> cho ${p1.name} ${getWinEmoji(probCombined)}\n\n` +
+            `${totalMatches === 0 ? "<i>(Chưa có lịch sử đối đầu, dự đoán chủ yếu dựa trên trình độ Elo hiện tại)</i>" : ""}`
+        )
         return
     }
 
@@ -190,7 +217,7 @@ async function getLlmAnalysis(text: string, players: any[]) {
     - If the user mentions two people with 'vs' or 'đấu với' or 'so sánh', use QUERY_H2H.
     - Return ONLY raw JSON without markdown blocks.`;
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=${GEMINI_API_KEY}`;
     try {
         const response = await fetch(url, { 
             method: "POST", 
