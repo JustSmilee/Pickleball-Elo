@@ -117,6 +117,70 @@ export const playerService = {
         });
 
         return streaks;
+    },
+
+    async getBestPartner(playerId: string): Promise<{
+        partner: Player;
+        wins: number;
+        total: number;
+        winRate: number;
+    } | null> {
+        if (!supabase) return null;
+        const { data: matches, error } = await supabase
+            .from('matches')
+            .select(`
+                *,
+                p1:team1_player1_id(id, name, user_ad),
+                p1b:team1_player2_id(id, name, user_ad),
+                p2:team2_player1_id(id, name, user_ad),
+                p2b:team2_player2_id(id, name, user_ad)
+            `)
+            .or(`team1_player1_id.eq.${playerId},team1_player2_id.eq.${playerId},team2_player1_id.eq.${playerId},team2_player2_id.eq.${playerId}`);
+
+        if (error || !matches) return null;
+
+        const partnerStats: Record<string, { partner: Player; wins: number; total: number }> = {};
+
+        matches.forEach((m: any) => {
+            let partnerObj: Player | null = null;
+            let playerWon = false;
+
+            const t1 = [m.team1_player1_id, m.team1_player2_id];
+            const t2 = [m.team2_player1_id, m.team2_player2_id];
+
+            if (t1.includes(playerId) && m.team1_player2_id) {
+                partnerObj = m.team1_player1_id === playerId ? m.p1b : m.p1;
+                playerWon = m.team1_score > m.team2_score;
+            } else if (t2.includes(playerId) && m.team2_player2_id) {
+                partnerObj = m.team2_player1_id === playerId ? m.p2b : m.p2;
+                playerWon = m.team2_score > m.team1_score;
+            }
+
+            if (partnerObj && partnerObj.id) {
+                if (!partnerStats[partnerObj.id]) {
+                    partnerStats[partnerObj.id] = { partner: partnerObj, wins: 0, total: 0 };
+                }
+                partnerStats[partnerObj.id].total += 1;
+                if (playerWon) {
+                    partnerStats[partnerObj.id].wins += 1;
+                }
+            }
+        });
+
+        const partnerList = Object.values(partnerStats).map(s => ({
+            ...s,
+            winRate: Math.round((s.wins / s.total) * 100)
+        }));
+
+        // Require minimum 2 matches together (prefer 3+ if available)
+        const min3Partners = partnerList.filter(p => p.total >= 3);
+        const candidates = min3Partners.length > 0 ? min3Partners : partnerList.filter(p => p.total >= 2);
+
+        if (candidates.length === 0) return null;
+
+        candidates.sort((a, b) => b.winRate - a.winRate || b.total - a.total || b.wins - a.wins);
+
+        return candidates[0];
     }
 };
 

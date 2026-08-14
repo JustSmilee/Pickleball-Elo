@@ -14,6 +14,7 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({ player, onClose })
     const [trend, setTrend] = useState<{ date: string, elo: number }[]>([]);
     const [streak, setStreak] = useState(0);
     const [matches, setMatches] = useState<any[]>([]);
+    const [bestPartner, setBestPartner] = useState<{ partner: Player; wins: number; total: number; winRate: number } | null>(null);
 
     useEffect(() => {
         playerService.getPlayerEloTrend(player.id).then(data => {
@@ -21,6 +22,9 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({ player, onClose })
         });
         playerService.calculateWinStreak(player.id).then(s => {
             setStreak(s);
+        });
+        playerService.getBestPartner(player.id).then(bp => {
+            setBestPartner(bp);
         });
         matchService.getPlayerMatches(player.id).then(m => {
             setMatches(m);
@@ -36,7 +40,7 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({ player, onClose })
                 position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
                 background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
-                padding: '20px'
+                padding: '16px'
             }}
             onClick={onClose}
         >
@@ -44,51 +48,84 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({ player, onClose })
                 initial={{ scale: 0.9, y: 20 }}
                 animate={{ scale: 1, y: 0 }}
                 className="glass-card"
-                style={{ width: '100%', maxWidth: '900px', maxHeight: '90vh', overflowY: 'auto', padding: '48px', position: 'relative', borderRadius: '48px', border: 'none' }}
+                style={{ width: '100%', maxWidth: '840px', maxHeight: '90vh', overflowY: 'auto', padding: '32px', position: 'relative', borderRadius: '28px', border: 'none' }}
                 onClick={e => e.stopPropagation()}
             >
-                <button onClick={onClose} style={{ position: 'absolute', top: '24px', right: '24px', background: 'rgba(255,255,255,0.05)', border: 'none', color: 'white', cursor: 'pointer', padding: '10px', borderRadius: '14px' }}>
-                    <X size={24} />
+                <button onClick={onClose} style={{ position: 'absolute', top: '20px', right: '20px', background: 'rgba(255,255,255,0.05)', border: 'none', color: 'white', cursor: 'pointer', padding: '8px', borderRadius: '12px' }}>
+                    <X size={20} />
                 </button>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '48px', marginBottom: '40px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '32px', marginBottom: '32px' }}>
                     <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '24px', marginBottom: '32px' }}>
-                            <div style={{ width: '100px', height: '100px', borderRadius: '32px', background: 'linear-gradient(135deg, var(--primary-neon), var(--secondary-neon))', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 10px 20px rgba(0,0,0,0.2)' }}>
-                                <span style={{ fontSize: '2.5rem', fontWeight: 900, color: 'var(--bg-dark)' }}>{player.name[0].toUpperCase()}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px' }}>
+                            <div style={{ width: '70px', height: '70px', borderRadius: '24px', background: 'linear-gradient(135deg, var(--primary-neon), var(--secondary-neon))', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 16px rgba(0,0,0,0.2)', flexShrink: 0 }}>
+                                <span style={{ fontSize: '1.8rem', fontWeight: 900, color: 'var(--bg-dark)' }}>{player.name[0].toUpperCase()}</span>
                             </div>
                             <div>
-                                <h2 className="heading-font" style={{ fontSize: '3rem', marginBottom: '4px', lineHeight: 1 }}>{player.name}</h2>
+                                <h2 className="heading-font" style={{ fontSize: '2rem', marginBottom: '2px', lineHeight: 1 }}>{player.name}</h2>
                                 {player.user_ad && (
-                                    <div style={{ color: 'var(--text-dim)', fontSize: '1rem', fontWeight: 600, marginBottom: '8px' }}>
+                                    <div style={{ color: 'var(--text-dim)', fontSize: '0.85rem', fontWeight: 600, marginBottom: '4px' }}>
                                         MBBANK: @{player.user_ad}
                                     </div>
                                 )}
-                                <div style={{ color: 'var(--primary-neon)', fontWeight: 800, fontSize: '1.4rem', fontFamily: 'var(--font-heading)', marginTop: '8px' }}>{player.elo_rating} ELO</div>
+                                <div style={{ color: 'var(--primary-neon)', fontWeight: 800, fontSize: '1.2rem', fontFamily: 'var(--font-heading)', marginTop: '4px' }}>{player.elo_rating} ELO</div>
                             </div>
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-                            <div className="glass-card" style={{ padding: '24px', background: 'rgba(255,255,255,0.03)', borderRadius: '24px' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-dim)', fontSize: '0.75rem', marginBottom: '10px', fontWeight: 700, letterSpacing: '0.05em' }}>
-                                    <Award size={16} /> TỈ LỆ THẮNG
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                            <div className="glass-card" style={{ padding: '16px', background: 'rgba(255,255,255,0.03)', borderRadius: '16px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-dim)', fontSize: '0.7rem', marginBottom: '6px', fontWeight: 700, letterSpacing: '0.05em' }}>
+                                    <Award size={14} /> TỈ LỆ THẮNG
                                 </div>
-                                <div style={{ fontSize: '1.8rem', fontWeight: 900, color: 'var(--success)', fontFamily: 'var(--font-heading)' }}>
+                                <div style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--success)', fontFamily: 'var(--font-heading)' }}>
                                     {player.matches_played ? Math.round((player.wins / player.matches_played) * 100) : 0}%
                                 </div>
                             </div>
-                            <div className="glass-card" style={{ padding: '24px', background: 'rgba(255,255,255,0.03)', borderRadius: '24px' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-dim)', fontSize: '0.75rem', marginBottom: '10px', fontWeight: 700, letterSpacing: '0.05em' }}>
-                                    <Target size={16} /> TRẬN ĐẤU
+                            <div className="glass-card" style={{ padding: '16px', background: 'rgba(255,255,255,0.03)', borderRadius: '16px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-dim)', fontSize: '0.7rem', marginBottom: '6px', fontWeight: 700, letterSpacing: '0.05em' }}>
+                                    <Target size={14} /> TRẬN ĐẤU
                                 </div>
-                                <div style={{ fontSize: '1.8rem', fontWeight: 900, color: 'white', fontFamily: 'var(--font-heading)' }}>{player.matches_played}</div>
+                                <div style={{ fontSize: '1.4rem', fontWeight: 900, color: 'white', fontFamily: 'var(--font-heading)' }}>{player.matches_played}</div>
                             </div>
-                            <div className="glass-card" style={{ padding: '24px', background: 'rgba(255,255,255,0.03)', borderRadius: '24px', gridColumn: 'span 2' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-dim)', fontSize: '0.75rem', marginBottom: '10px', fontWeight: 700, letterSpacing: '0.05em' }}>
+                            <div className="glass-card" style={{ padding: '16px', background: 'rgba(255,255,255,0.03)', borderRadius: '16px', gridColumn: 'span 2' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-dim)', fontSize: '0.7rem', marginBottom: '6px', fontWeight: 700, letterSpacing: '0.05em' }}>
                                     🔥 CHUỖI THẮNG HIỆN TẠI
                                 </div>
-                                <div style={{ fontSize: '1.8rem', fontWeight: 900, color: '#FF4500', fontFamily: 'var(--font-heading)' }}>{streak} TRẬN</div>
+                                <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#FF4500', fontFamily: 'var(--font-heading)' }}>{streak} TRẬN</div>
                             </div>
+
+                            {/* Best Doubles Partner Card */}
+                            {bestPartner && (
+                                <div className="glass-card" style={{
+                                    padding: '16px',
+                                    background: 'linear-gradient(135deg, rgba(255, 215, 0, 0.12), rgba(255, 138, 180, 0.05))',
+                                    borderRadius: '16px',
+                                    border: '1px solid rgba(255, 215, 0, 0.3)',
+                                    gridColumn: 'span 2'
+                                }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'gold', fontSize: '0.7rem', marginBottom: '8px', fontWeight: 800, letterSpacing: '0.05em' }}>
+                                        <Award size={14} /> 🤝 CẠ ĐÁNH ĐÔI ĂN Ý NHẤT
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+                                        <div>
+                                            <div style={{ fontSize: '1.1rem', fontWeight: 900, color: 'white' }}>
+                                                {bestPartner.partner.name}
+                                                {bestPartner.partner.user_ad && (
+                                                    <span style={{ fontSize: '0.75rem', color: 'var(--primary-neon)', marginLeft: '6px', fontWeight: 700 }}>
+                                                        @{bestPartner.partner.user_ad}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)', marginTop: '2px' }}>
+                                                Thắng {bestPartner.wins}/{bestPartner.total} trận đánh đôi cùng nhau
+                                            </div>
+                                        </div>
+                                        <div style={{ fontSize: '1.4rem', fontWeight: 900, color: 'gold', fontFamily: 'var(--font-heading)', flexShrink: 0 }}>
+                                            {bestPartner.winRate}%
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
 
