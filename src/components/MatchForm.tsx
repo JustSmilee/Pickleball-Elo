@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { playerService, matchService, tournamentService } from '../services/api';
 import { calculateEloDelta } from '../utils/elo';
 import type { Player } from '../types';
-import { Users, ArrowRight, X, Trophy } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { Users, ArrowRight, X, Trophy, Search, ChevronDown } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface MatchFormProps {
     onSuccess: () => void;
@@ -59,10 +59,183 @@ export const MatchForm: React.FC<MatchFormProps> = ({ onSuccess, onCancel, editi
     }, [tournamentId]);
 
 
+const PlayerSelect: React.FC<{
+    value: string;
+    onChange: (id: string) => void;
+    availablePlayers: Player[];
+    placeholder?: string;
+    accentColor?: string;
+}> = ({ value, onChange, availablePlayers, placeholder = "Chọn người chơi...", accentColor = "var(--primary-neon)" }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const [search, setSearch] = useState('');
+
+    const selectedPlayer = availablePlayers.find(p => p.id === value);
+
+    const sortedPlayers = [...availablePlayers].sort((a, b) => a.name.localeCompare(b.name, 'vi'));
+
+    const filtered = sortedPlayers.filter(p =>
+        p.name.toLowerCase().includes(search.toLowerCase()) ||
+        (p.user_ad && p.user_ad.toLowerCase().includes(search.toLowerCase()))
+    );
+
+    return (
+        <div style={{ position: 'relative' }}>
+            <div
+                onClick={() => setIsOpen(!isOpen)}
+                style={{
+                    width: '100%',
+                    padding: '14px 18px',
+                    borderRadius: '18px',
+                    background: '#1e2337',
+                    border: isOpen ? `2px solid ${accentColor}` : '1px solid var(--glass-border)',
+                    color: 'white',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    fontWeight: 700,
+                    transition: 'all 0.2s ease',
+                    boxShadow: isOpen ? `0 0 12px ${accentColor}33` : 'none'
+                }}
+            >
+                {selectedPlayer ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden', flex: 1 }}>
+                        <span style={{ fontWeight: 800, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                            {selectedPlayer.name}
+                        </span>
+                        {selectedPlayer.user_ad && (
+                            <span style={{ fontSize: '0.75rem', color: accentColor, background: `${accentColor}18`, padding: '2px 8px', borderRadius: '8px', whiteSpace: 'nowrap' }}>
+                                @{selectedPlayer.user_ad}
+                            </span>
+                        )}
+                    </div>
+                ) : (
+                    <span style={{ color: 'var(--text-dim)', fontWeight: 500 }}>{placeholder}</span>
+                )}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    {selectedPlayer && (
+                        <X
+                            size={16}
+                            color="var(--text-dim)"
+                            onClick={(e) => { e.stopPropagation(); onChange(''); }}
+                            style={{ cursor: 'pointer', opacity: 0.8 }}
+                        />
+                    )}
+                    <ChevronDown size={18} color="var(--text-dim)" style={{ transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+                </div>
+            </div>
+
+            <AnimatePresence>
+                {isOpen && (
+                    <>
+                        <div
+                            style={{ position: 'fixed', inset: 0, zIndex: 499 }}
+                            onClick={() => setIsOpen(false)}
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, y: -8, scale: 0.98 }}
+                            animate={{ opacity: 1, y: 4, scale: 1 }}
+                            exit={{ opacity: 0, y: -8, scale: 0.98 }}
+                            transition={{ duration: 0.15 }}
+                            style={{
+                                position: 'absolute',
+                                top: '100%',
+                                left: 0,
+                                right: 0,
+                                zIndex: 500,
+                                background: '#151929',
+                                border: `1px solid ${accentColor}55`,
+                                borderRadius: '20px',
+                                padding: '12px',
+                                boxShadow: '0 12px 32px rgba(0, 0, 0, 0.7)',
+                                maxHeight: '280px',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '8px'
+                            }}
+                        >
+                            <div style={{ position: 'relative' }}>
+                                <input
+                                    autoFocus
+                                    type="text"
+                                    value={search}
+                                    onChange={e => setSearch(e.target.value)}
+                                    placeholder="Tìm tên hoặc @userad..."
+                                    style={{
+                                        width: '100%',
+                                        padding: '10px 14px 10px 34px',
+                                        borderRadius: '12px',
+                                        background: '#1e2337',
+                                        border: `1px solid ${accentColor}44`,
+                                        color: 'white',
+                                        fontSize: '0.85rem',
+                                        outline: 'none'
+                                    }}
+                                />
+                                <Search size={16} color="var(--text-dim)" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)' }} />
+                            </div>
+
+                            <div style={{ overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '4px', paddingRight: '2px' }}>
+                                {filtered.length === 0 ? (
+                                    <div style={{ padding: '12px', textAlign: 'center', color: 'var(--text-dim)', fontSize: '0.85rem' }}>
+                                        Không tìm thấy vận động viên nào
+                                    </div>
+                                ) : (
+                                    filtered.map(p => (
+                                        <div
+                                            key={p.id}
+                                            onClick={() => {
+                                                onChange(p.id);
+                                                setIsOpen(false);
+                                                setSearch('');
+                                            }}
+                                            style={{
+                                                padding: '10px 14px',
+                                                borderRadius: '12px',
+                                                background: value === p.id ? `${accentColor}20` : 'transparent',
+                                                color: 'white',
+                                                cursor: 'pointer',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'space-between',
+                                                transition: 'all 0.15s'
+                                            }}
+                                            onMouseEnter={e => (e.currentTarget.style.background = `${accentColor}15`)}
+                                            onMouseLeave={e => (e.currentTarget.style.background = value === p.id ? `${accentColor}20` : 'transparent')}
+                                        >
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
+                                                <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>{p.name}</span>
+                                                {p.user_ad && (
+                                                    <span style={{ fontSize: '0.75rem', color: accentColor, opacity: 0.9 }}>
+                                                        @{p.user_ad}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <span style={{ fontSize: '0.75rem', color: 'var(--text-dim)', fontWeight: 600, fontFamily: 'var(--font-heading)' }}>
+                                                {p.elo_rating} Elo
+                                            </span>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
+        </div>
+    );
+};
+
     const getAvailablePlayers = (currentId: string) => {
         const selectedIds = [p1, p1b, p2, p2b].filter(id => id && id !== currentId);
-        return players.filter(p => !selectedIds.includes(p.id));
+        const available = players.filter(p => !selectedIds.includes(p.id));
+        const currentSelected = players.find(p => p.id === currentId);
+        if (currentSelected && !available.some(p => p.id === currentSelected.id)) {
+            available.push(currentSelected);
+        }
+        return available.sort((a, b) => a.name.localeCompare(b.name, 'vi'));
     };
+
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -254,18 +427,24 @@ export const MatchForm: React.FC<MatchFormProps> = ({ onSuccess, onCancel, editi
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                             <div>
                                 <label style={{ fontSize: '0.85rem', color: 'var(--text-dim)', marginBottom: '8px', display: 'block', fontWeight: 600 }}>Người chơi 1</label>
-                                <select value={p1} onChange={e => setP1(e.target.value)} style={{ width: '100%', borderRadius: '16px' }}>
-                                    <option value="">Chọn người chơi...</option>
-                                    {getAvailablePlayers(p1).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                                </select>
+                                <PlayerSelect
+                                    value={p1}
+                                    onChange={setP1}
+                                    availablePlayers={getAvailablePlayers(p1)}
+                                    placeholder="Chọn người chơi..."
+                                    accentColor="var(--primary-neon)"
+                                />
                             </div>
                             {matchType === 'doubles' && (
                                 <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}>
                                     <label style={{ fontSize: '0.85rem', color: 'var(--text-dim)', marginBottom: '8px', display: 'block', fontWeight: 600 }}>Người chơi 2</label>
-                                    <select value={p1b} onChange={e => setP1b(e.target.value)} style={{ width: '100%', borderRadius: '16px' }}>
-                                        <option value="">Chọn người chơi...</option>
-                                        {getAvailablePlayers(p1b).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                                    </select>
+                                    <PlayerSelect
+                                        value={p1b}
+                                        onChange={setP1b}
+                                        availablePlayers={getAvailablePlayers(p1b)}
+                                        placeholder="Chọn người chơi thứ 2..."
+                                        accentColor="var(--primary-neon)"
+                                    />
                                 </motion.div>
                             )}
                             <div style={{ marginTop: '12px' }}>
@@ -288,18 +467,24 @@ export const MatchForm: React.FC<MatchFormProps> = ({ onSuccess, onCancel, editi
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                             <div>
                                 <label style={{ fontSize: '0.85rem', color: 'var(--text-dim)', marginBottom: '8px', display: 'block', fontWeight: 600 }}>Người chơi 1</label>
-                                <select value={p2} onChange={e => setP2(e.target.value)} style={{ width: '100%', borderRadius: '16px' }}>
-                                    <option value="">Chọn người chơi...</option>
-                                    {getAvailablePlayers(p2).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                                </select>
+                                <PlayerSelect
+                                    value={p2}
+                                    onChange={setP2}
+                                    availablePlayers={getAvailablePlayers(p2)}
+                                    placeholder="Chọn người chơi..."
+                                    accentColor="var(--secondary-neon)"
+                                />
                             </div>
                             {matchType === 'doubles' && (
                                 <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}>
                                     <label style={{ fontSize: '0.85rem', color: 'var(--text-dim)', marginBottom: '8px', display: 'block', fontWeight: 600 }}>Người chơi 2</label>
-                                <select value={p2b} onChange={e => setP2b(e.target.value)} style={{ width: '100%', borderRadius: '16px' }}>
-                                    <option value="">Chọn người chơi...</option>
-                                    {getAvailablePlayers(p2b).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                                </select>
+                                    <PlayerSelect
+                                        value={p2b}
+                                        onChange={setP2b}
+                                        availablePlayers={getAvailablePlayers(p2b)}
+                                        placeholder="Chọn người chơi thứ 2..."
+                                        accentColor="var(--secondary-neon)"
+                                    />
                                 </motion.div>
                             )}
                             <div style={{ marginTop: '12px' }}>
