@@ -1,5 +1,7 @@
 import { supabase } from '../lib/supabase';
-import type { Player, Match } from '../types';
+import type { Player, Match, TournamentPlayerStats } from '../types';
+import { calculateEloDelta } from '../utils/elo';
+
 
 export const playerService = {
     async getAllPlayers(): Promise<Player[]> {
@@ -94,7 +96,8 @@ export const matchService = {
         p1:team1_player1_id(name, user_ad),
         p1b:team1_player2_id(name, user_ad),
         p2:team2_player1_id(name, user_ad),
-        p2b:team2_player2_id(name, user_ad)
+        p2b:team2_player2_id(name, user_ad),
+        tournament:tournament_id(name)
       `)
             .order('created_at', { ascending: false });
 
@@ -167,7 +170,8 @@ export const matchService = {
                 p1:team1_player1_id(name, user_ad),
                 p1b:team1_player2_id(name, user_ad),
                 p2:team2_player1_id(name, user_ad),
-                p2b:team2_player2_id(name, user_ad)
+                p2b:team2_player2_id(name, user_ad),
+                tournament:tournament_id(name)
             `)
             .or(`team1_player1_id.eq.${playerId},team1_player2_id.eq.${playerId},team2_player1_id.eq.${playerId},team2_player2_id.eq.${playerId}`)
             .order('created_at', { ascending: false });
@@ -189,5 +193,106 @@ export const tournamentService = {
         if (!supabase) return;
         const { error } = await supabase.from('tournaments').insert([{ name }]);
         if (error) throw error;
+    },
+
+    async getTournamentLeaderboard(tournamentId: string): Promise<TournamentPlayerStats[]> {
+        if (!supabase) return [];
+
+        const [matchesRes, playersRes] = await Promise.all([
+            supabase
+                .from('matches')
+                .select('*')
+                .eq('tournament_id', tournamentId)
+                .order('created_at', { ascending: true }),
+            playerService.getAllPlayers()
+        ]);
+
+        if (matchesRes.error) throw matchesRes.error;
+        const matches = matchesRes.data || [];
+        const allPlayers = playersRes || [];
+
+        const statsMap: Record<string, TournamentPlayerStats> = {};
+        allPlayers.forEach(p => {
+            statsMap[p.id] = {
+                playerId: p.id,
+                name: p.name,
+                user_ad: p.user_ad,
+                elo_rating: 1200,
+                matches_played: 0,
+                wins: 0,
+                losses: 0,
+                current_streak: 0
+            };
+        });
+
+        matches.forEach((match: any) => {
+            const p1 = match.team1_player1_id;
+            const p1b = match.team1_player2_id;
+            const p2 = match.team2_player1_id;
+            const p2b = match.team2_player2_id;
+
+            const isDoubles = match.type === 'doubles';
+            const r1a = statsMap[p1]?.elo_rating ?? 1200;
+            const r1b = p1b ? (statsMap[p1b]?.elo_rating ?? 1200) : 1200;
+            const r2a = statsMap[p2]?.elo_rating ?? 1200;
+            const r2b = p2b ? (statsMap[p2b]?.elo_rating ?? 1200) : 1200;
+
+            const t1Avg = isDoubles ? (r1a + r1b) / 2 : r1a;
+            const t2Avg = isDoubles ? (r2a + r2b) / 2 : r2a;
+
+            const delta = calculateEloDelta(t1Avg, t2Avg, match.team1_score, match.team2_score);
+            const team1Won = match.team1_score > match.team2_score;
+
+            const updatePlayer = (pid: string, isWin: boolean, d: number) => {
+                if (!statsMap[pid]) return;
+                statsMap[pid].elo_rating += d;
+                statsMap[pid].matches_played += 1;
+                if (isWin) {
+                    statsMap[pid].wins += 1;
+                    statsMap[pid].current_streak = statsMap[pid].current_streak > 0 ? statsMap[pid].current_streak + 1 : 1;
+                } else {
+                    statsMap[pid].losses += 1;
+                    statsMap[pid].current_streak = 0;
+                }
+            };
+
+            updatePlayer(p1, team1Won, delta);
+            if (p1b) updatePlayer(p1b, team1Won, delta);
+
+            updatePlayer(p2, !team1Won, -delta);
+            if (p2b) updatePlayer(p2b, !team1Won, -delta);
+        });
+
+        return Object.values(statsMap)
+            .filter(p => p.matches_played > 0)
+            .sort((a, b) => b.elo_rating - a.elo_rating || b.wins - a.wins);
+    },
+
+    async getTournamentPlayerElos(tournamentId: string): Promise<Record<string, number>> {
+        const stats = await this.getTournamentLeaderboard(tournamentId);
+        const map: Record<string, number> = {};
+        stats.forEach(s => {
+            map[s.playerId] = s.elo_rating;
+        });
+        return map;
+    },
+
+    async getTournamentMatches(tournamentId: string): Promise<any[]> {
+        if (!supabase) return [];
+        const { data, error } = await supabase
+            .from('matches')
+            .select(`
+                *,
+                p1:team1_player1_id(name, user_ad),
+                p1b:team1_player2_id(name, user_ad),
+                p2:team2_player1_id(name, user_ad),
+                p2b:team2_player2_id(name, user_ad)
+            `)
+            .eq('tournament_id', tournamentId)
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        return data || [];
     }
 };
+

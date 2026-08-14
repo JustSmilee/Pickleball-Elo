@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { playerService } from '../services/api';
-import type { Player } from '../types';
-import { Trophy, Medal, Star, User, BarChart2 } from 'lucide-react';
+import { playerService, tournamentService } from '../services/api';
+import type { Player, Tournament } from '../types';
+import { Trophy, Medal, Star, User, BarChart2, Filter } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 interface LeaderboardProps {
@@ -10,22 +10,43 @@ interface LeaderboardProps {
 
 export const Leaderboard: React.FC<LeaderboardProps> = ({ onViewProfile }) => {
     const [players, setPlayers] = useState<Player[]>([]);
+    const [tournaments, setTournaments] = useState<Tournament[]>([]);
+    const [selectedTournamentId, setSelectedTournamentId] = useState<string>('global');
     const [loading, setLoading] = useState(true);
-
     const [searchQuery, setSearchQuery] = useState('');
 
     useEffect(() => {
+        tournamentService.getAllTournaments().then(setTournaments).catch(console.error);
+    }, []);
+
+    useEffect(() => {
+        setLoading(true);
         const fetchData = async () => {
-            const data = await playerService.getAllPlayers();
-            const playersWithStreaks = await Promise.all(data.map(async (p) => {
-                const streak = await playerService.calculateWinStreak(p.id);
-                return { ...p, current_streak: streak };
-            }));
-            setPlayers(playersWithStreaks);
+            if (selectedTournamentId === 'global') {
+                const data = await playerService.getAllPlayers();
+                const playersWithStreaks = await Promise.all(data.map(async (p) => {
+                    const streak = await playerService.calculateWinStreak(p.id);
+                    return { ...p, current_streak: streak };
+                }));
+                setPlayers(playersWithStreaks);
+            } else {
+                const tStats = await tournamentService.getTournamentLeaderboard(selectedTournamentId);
+                const mappedPlayers: Player[] = tStats.map(s => ({
+                    id: s.playerId,
+                    name: s.name,
+                    user_ad: s.user_ad,
+                    elo_rating: s.elo_rating,
+                    matches_played: s.matches_played,
+                    wins: s.wins,
+                    losses: s.losses,
+                    current_streak: s.current_streak
+                }));
+                setPlayers(mappedPlayers);
+            }
             setLoading(false);
         };
         fetchData();
-    }, []);
+    }, [selectedTournamentId]);
 
     const filteredPlayers = players.filter(p => {
         const query = searchQuery.toLowerCase();
@@ -44,17 +65,45 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ onViewProfile }) => {
         }
     };
 
+    const selectedTourneyName = tournaments.find(t => t.id === selectedTournamentId)?.name;
+
     if (loading) return <div className="fade-in">Đang tải bảng xếp hạng...</div>;
 
     return (
         <div className="fade-in glass-card leaderboard-container" style={{ padding: '32px' }}>
-            <div className="leaderboard-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', flexWrap: 'wrap', gap: '20px' }}>
+            <div className="leaderboard-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '20px' }}>
                 <h2 className="neon-text heading-font leaderboard-title" style={{ fontSize: '2rem', display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <Star color="var(--primary-neon)" fill="var(--primary-neon)" /> Bảng xếp hạng
                 </h2>
                 
-                <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }} className="search-container">
-                    <div style={{ position: 'relative', flex: 1 }}>
+                <div style={{ display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }} className="search-container">
+                    {/* Tournament Filter Dropdown */}
+                    <div style={{ position: 'relative', minWidth: '220px' }}>
+                        <select
+                            value={selectedTournamentId}
+                            onChange={(e) => setSelectedTournamentId(e.target.value)}
+                            style={{
+                                width: '100%',
+                                background: selectedTournamentId !== 'global' ? 'rgba(255, 215, 0, 0.1)' : '#1e2337',
+                                border: selectedTournamentId !== 'global' ? '2px solid gold' : '2px solid var(--primary-neon)',
+                                color: 'white',
+                                padding: '10px 16px 10px 36px',
+                                borderRadius: '20px',
+                                fontSize: '0.9rem',
+                                outline: 'none',
+                                fontWeight: 700,
+                                cursor: 'pointer'
+                            }}
+                        >
+                            <option value="global">🌐 Bảng xếp hạng Tổng (Tất cả)</option>
+                            {tournaments.map(t => (
+                                <option key={t.id} value={t.id}>🏆 {t.name}</option>
+                            ))}
+                        </select>
+                        <Filter size={16} color={selectedTournamentId !== 'global' ? 'gold' : 'var(--primary-neon)'} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)' }} />
+                    </div>
+
+                    <div style={{ position: 'relative', flex: 1, minWidth: '200px' }}>
                         <input
                             type="text"
                             placeholder="Tìm tên hoặc USERAD..."
@@ -68,7 +117,7 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ onViewProfile }) => {
                                 padding: '10px 16px 10px 40px',
                                 borderRadius: '20px',
                                 fontSize: '0.9rem',
-                                width: '250px',
+                                width: '100%',
                                 outline: 'none',
                                 boxShadow: '0 0 10px rgba(0, 242, 255, 0.05)'
                             }}
@@ -80,6 +129,45 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ onViewProfile }) => {
                     </div>
                 </div>
             </div>
+
+            {/* Banner when tournament filter is active */}
+            {selectedTournamentId !== 'global' && (
+                <div style={{
+                    background: 'linear-gradient(135deg, rgba(255, 215, 0, 0.15), rgba(255, 215, 0, 0.05))',
+                    border: '1px solid rgba(255, 215, 0, 0.3)',
+                    borderRadius: '20px',
+                    padding: '16px 24px',
+                    marginBottom: '1.5rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '16px'
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <Trophy color="gold" size={28} />
+                        <div>
+                            <div style={{ fontSize: '1.1rem', fontWeight: 900, color: 'gold' }}>{selectedTourneyName}</div>
+                            <div style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>Bảng xếp hạng Elo riêng cho giải đấu này (Base Elo = 1200)</div>
+                        </div>
+                    </div>
+                    <button
+                        onClick={() => setSelectedTournamentId('global')}
+                        style={{
+                            background: 'rgba(255,255,255,0.1)',
+                            border: 'none',
+                            color: 'white',
+                            padding: '6px 16px',
+                            borderRadius: '12px',
+                            cursor: 'pointer',
+                            fontSize: '0.8rem',
+                            fontWeight: 700
+                        }}
+                    >
+                        Quay lại xếp hạng Tổng
+                    </button>
+                </div>
+            )}
+
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 {filteredPlayers.map((player, index) => (

@@ -32,3 +32,15 @@ export interface Tournament {
   start_date: string;
   created_at: string;
 }
+
+export interface TournamentPlayerStats {
+  playerId: string;
+  name: string;
+  user_ad?: string;
+  elo_rating: number;
+  matches_played: number;
+  wins: number;
+  losses: number;
+  current_streak: number;
+}
+

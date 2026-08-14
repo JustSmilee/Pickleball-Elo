@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { matchService } from '../services/api';
-import { Clock, TrendingUp, TrendingDown, Users, User, Trash2, Edit2 } from 'lucide-react';
+import { matchService, tournamentService } from '../services/api';
+import { Clock, TrendingUp, TrendingDown, Users, User, Trash2, Edit2, Trophy, Filter } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import type { Tournament } from '../types';
 
 interface HistoryProps {
     onEdit?: (match: any) => void;
@@ -9,13 +10,19 @@ interface HistoryProps {
 
 export const History: React.FC<HistoryProps> = ({ onEdit }) => {
     const [matches, setMatches] = useState<any[]>([]);
+    const [tournaments, setTournaments] = useState<Tournament[]>([]);
+    const [selectedTournamentId, setSelectedTournamentId] = useState<string>('all');
     const [loading, setLoading] = useState(true);
     const [isDeleting, setIsDeleting] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
 
     const fetchMatches = () => {
-        matchService.getRecentMatches().then(data => {
-            setMatches(data);
+        Promise.all([
+            matchService.getRecentMatches(),
+            tournamentService.getAllTournaments()
+        ]).then(([matchesData, tournamentsData]) => {
+            setMatches(matchesData);
+            setTournaments(tournamentsData);
             setLoading(false);
         });
     };
@@ -26,7 +33,7 @@ export const History: React.FC<HistoryProps> = ({ onEdit }) => {
 
     const filteredMatches = matches.filter(match => {
         const query = searchQuery.toLowerCase();
-        return (
+        const matchesPlayer = (
             match.p1?.name.toLowerCase().includes(query) ||
             match.p1b?.name.toLowerCase().includes(query) ||
             match.p2?.name.toLowerCase().includes(query) ||
@@ -36,6 +43,10 @@ export const History: React.FC<HistoryProps> = ({ onEdit }) => {
             match.p2?.user_ad?.toLowerCase().includes(query) ||
             match.p2b?.user_ad?.toLowerCase().includes(query)
         );
+
+        const matchesTournament = selectedTournamentId === 'all' || match.tournament_id === selectedTournamentId;
+
+        return matchesPlayer && matchesTournament;
     });
 
     const handleDelete = async (matchId: string) => {
@@ -73,8 +84,34 @@ export const History: React.FC<HistoryProps> = ({ onEdit }) => {
                 <h2 className="neon-text heading-font history-title" style={{ fontSize: '2rem', display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <Clock color="var(--primary-neon)" /> Lịch sử trận đấu
                 </h2>
-                <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }} className="search-wrapper">
-                    <div style={{ position: 'relative', flex: 1 }}>
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }} className="search-wrapper">
+                    {/* Tournament Filter */}
+                    <div style={{ position: 'relative', minWidth: '180px' }}>
+                        <select
+                            value={selectedTournamentId}
+                            onChange={(e) => setSelectedTournamentId(e.target.value)}
+                            style={{
+                                width: '100%',
+                                background: selectedTournamentId !== 'all' ? 'rgba(255, 215, 0, 0.1)' : '#1e2337',
+                                border: selectedTournamentId !== 'all' ? '2px solid gold' : '2px solid var(--primary-neon)',
+                                color: 'white',
+                                padding: '10px 14px 10px 34px',
+                                borderRadius: '24px',
+                                fontSize: '0.85rem',
+                                outline: 'none',
+                                fontWeight: 700,
+                                cursor: 'pointer'
+                            }}
+                        >
+                            <option value="all">Tất cả trận đấu</option>
+                            {tournaments.map(t => (
+                                <option key={t.id} value={t.id}>🏆 {t.name}</option>
+                            ))}
+                        </select>
+                        <Filter size={14} color={selectedTournamentId !== 'all' ? 'gold' : 'var(--primary-neon)'} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
+                    </div>
+
+                    <div style={{ position: 'relative', flex: 1, minWidth: '180px' }}>
                         <input
                             type="text"
                             placeholder="Tìm vận động viên..."
@@ -85,10 +122,10 @@ export const History: React.FC<HistoryProps> = ({ onEdit }) => {
                                 background: '#1e2337',
                                 border: '2px solid var(--primary-neon)',
                                 color: 'white',
-                                padding: '12px 16px 12px 44px',
+                                padding: '10px 16px 10px 44px',
                                 borderRadius: '24px',
-                                fontSize: '1rem',
-                                width: '300px',
+                                fontSize: '0.9rem',
+                                width: '100%',
                                 transition: 'all 0.3s',
                                 outline: 'none',
                                 boxShadow: '0 0 15px rgba(0, 242, 255, 0.1)'
@@ -142,9 +179,28 @@ export const History: React.FC<HistoryProps> = ({ onEdit }) => {
                                     </button>
                                 </div>
 
-                                <div style={{ marginBottom: '20px', fontSize: '0.75rem', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <Clock size={14} /> {formatRelativeTime(match.created_at)}
+                                <div style={{ marginBottom: '20px', fontSize: '0.75rem', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        <Clock size={14} /> {formatRelativeTime(match.created_at)}
+                                    </span>
+                                    {match.tournament?.name && (
+                                        <span style={{
+                                            background: 'rgba(255, 215, 0, 0.1)',
+                                            color: 'gold',
+                                            border: '1px solid rgba(255, 215, 0, 0.3)',
+                                            padding: '2px 10px',
+                                            borderRadius: '10px',
+                                            fontSize: '0.7rem',
+                                            fontWeight: 800,
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '4px'
+                                        }}>
+                                            <Trophy size={12} /> {match.tournament.name}
+                                        </span>
+                                    )}
                                 </div>
+
 
                                 <div className="match-grid" style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: '24px' }}>
                                     <div style={{ textAlign: 'right' }}>
