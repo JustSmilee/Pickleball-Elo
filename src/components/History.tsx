@@ -139,10 +139,10 @@ export const History: React.FC<HistoryProps> = ({ onEdit }) => {
                 </div>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <AnimatePresence>
                     {filteredMatches.length === 0 ? (
-                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="glass-card" style={{ padding: '60px', textAlign: 'center' }}>
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="glass-card" style={{ padding: '40px', textAlign: 'center' }}>
                             <p style={{ color: 'var(--text-dim)' }}>Không tìm thấy trận đấu nào phù hợp.</p>
                         </motion.div>
                     ) : (
@@ -154,79 +154,79 @@ export const History: React.FC<HistoryProps> = ({ onEdit }) => {
                                 exit={{ opacity: 0, x: -20 }}
                                 transition={{ delay: index * 0.05 }}
                                 className="glass-card hover-row history-item-card"
-                                style={{ padding: '28px', position: 'relative', opacity: isDeleting === match.id ? 0.5 : 1, borderRadius: '28px' }}
+                                style={{ padding: '16px 20px', position: 'relative', opacity: isDeleting === match.id ? 0.5 : 1, borderRadius: '16px' }}
                             >
                                 {/* Actions (All matches) */}
-                                <div style={{ position: 'absolute', top: '16px', right: '16px', display: 'flex', gap: '10px' }}>
+                                <div style={{ position: 'absolute', top: '12px', right: '12px', display: 'flex', gap: '8px' }}>
                                     <button
                                         onClick={() => onEdit?.(match)}
                                         style={{
                                             background: 'rgba(0, 242, 255, 0.05)', border: '1px solid hsla(183, 100%, 50%, 0.1)', color: 'var(--primary-neon)', cursor: 'pointer',
-                                            padding: '8px 12px', borderRadius: '12px', transition: 'all 0.2s ease', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', fontWeight: 700
+                                            padding: '6px 10px', borderRadius: '10px', transition: 'all 0.2s ease', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', fontWeight: 700
                                         }}
                                     >
-                                        <Edit2 size={14} /> Sửa
+                                        <Edit2 size={12} /> Sửa
                                     </button>
                                     <button
                                         onClick={() => handleDelete(match.id)}
                                         disabled={isDeleting !== null}
                                         style={{
                                             background: 'rgba(239, 68, 68, 0.05)', border: '1px solid rgba(239, 68, 68, 0.1)', color: 'var(--error)', cursor: 'pointer',
-                                            padding: '8px 12px', borderRadius: '12px', transition: 'all 0.2s ease', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', fontWeight: 700
+                                            padding: '6px 10px', borderRadius: '10px', transition: 'all 0.2s ease', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', fontWeight: 700
                                         }}
                                     >
-                                        <Trash2 size={14} /> Xoá
+                                        <Trash2 size={12} /> Xoá
                                     </button>
                                 </div>
 
-                                <div style={{ marginBottom: '20px', fontSize: '0.75rem', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                        <Clock size={14} /> {formatRelativeTime(match.created_at)}
+                                <div style={{ marginBottom: '12px', fontSize: '0.7rem', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                        <Clock size={12} /> {formatRelativeTime(match.created_at)}
                                     </span>
                                     {match.tournament?.name && (
                                         <span style={{
                                             background: 'rgba(255, 215, 0, 0.1)',
                                             color: 'gold',
                                             border: '1px solid rgba(255, 215, 0, 0.3)',
-                                            padding: '2px 10px',
-                                            borderRadius: '10px',
-                                            fontSize: '0.7rem',
+                                            padding: '2px 8px',
+                                            borderRadius: '8px',
+                                            fontSize: '0.65rem',
                                             fontWeight: 800,
                                             display: 'flex',
                                             alignItems: 'center',
                                             gap: '4px'
                                         }}>
-                                            <Trophy size={12} /> {match.tournament.name}
+                                            <Trophy size={11} /> {match.tournament.name}
                                         </span>
                                     )}
                                 </div>
 
 
-                                <div className="match-grid" style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: '24px' }}>
+                                <div className="match-grid" style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: '16px' }}>
                                     <div style={{ textAlign: 'right' }}>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                            <div className="player-name" style={{ fontWeight: 900, fontSize: '1.5rem', color: match.team1_score > match.team2_score ? 'var(--primary-neon)' : 'white', lineHeight: 1 }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                            <div className="player-name" style={{ fontWeight: 900, fontSize: '1.15rem', color: match.team1_score > match.team2_score ? 'var(--primary-neon)' : 'white', lineHeight: 1.1 }}>
                                                 {match.p1?.name}
                                             </div>
                                             {match.p1b && (
                                                 <>
-                                                    <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', fontWeight: 800, margin: '-2px 0' }}>&</div>
-                                                    <div className="player-name" style={{ fontWeight: 900, fontSize: '1.5rem', color: match.team1_score > match.team2_score ? 'var(--primary-neon)' : 'white', lineHeight: 1 }}>
+                                                    <div style={{ fontSize: '0.65rem', color: 'var(--text-dim)', fontWeight: 800, margin: '-2px 0' }}>&</div>
+                                                    <div className="player-name" style={{ fontWeight: 900, fontSize: '1.15rem', color: match.team1_score > match.team2_score ? 'var(--primary-neon)' : 'white', lineHeight: 1.1 }}>
                                                         {match.p1b.name}
                                                     </div>
                                                 </>
                                             )}
                                         </div>
-                                        <div style={{ marginTop: '10px', fontSize: '0.85rem', color: match.team1_score > match.team2_score ? 'var(--success)' : 'var(--text-dim)', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px' }}>
-                                            {match.team1_score > match.team2_score ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
+                                        <div style={{ marginTop: '6px', fontSize: '0.8rem', color: match.team1_score > match.team2_score ? 'var(--success)' : 'var(--text-dim)', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px' }}>
+                                            {match.team1_score > match.team2_score ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
                                             <span style={{ fontWeight: 800 }}>{match.elo_delta_team1 > 0 ? `+${match.elo_delta_team1}` : match.elo_delta_team1}</span>
                                         </div>
                                     </div>
 
-                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
                                         <div className="score-box" style={{
-                                            padding: '14px 28px', borderRadius: '22px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--glass-border)',
-                                            fontFamily: 'var(--font-heading)', fontSize: '1.8rem', fontWeight: 900, letterSpacing: '0.05em', color: 'white'
+                                            padding: '8px 18px', borderRadius: '14px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--glass-border)',
+                                            fontFamily: 'var(--font-heading)', fontSize: '1.3rem', fontWeight: 900, letterSpacing: '0.05em', color: 'white'
                                         }}>
                                             {match.team1_score} - {match.team2_score}
                                         </div>

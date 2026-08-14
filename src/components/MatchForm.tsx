@@ -424,18 +424,18 @@ const PlayerSelect: React.FC<{
                     </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
                     {/* Team 1 */}
-                    <motion.div whileHover={{ y: -5 }} className="glass-card" style={{ padding: '32px', borderTop: '8px solid var(--primary-neon)', borderRadius: '32px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px' }}>
-                            <div style={{ padding: '12px', background: 'hsla(var(--primary-neon-h), 100%, 50%, 0.1)', borderRadius: '18px' }}>
-                                <Users color="var(--primary-neon)" size={28} />
+                    <motion.div whileHover={{ y: -3 }} className="glass-card" style={{ padding: '20px', borderTop: '4px solid var(--primary-neon)', borderRadius: '20px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+                            <div style={{ padding: '8px', background: 'hsla(var(--primary-neon-h), 100%, 50%, 0.1)', borderRadius: '12px' }}>
+                                <Users color="var(--primary-neon)" size={20} />
                             </div>
-                            <h3 className="heading-font" style={{ fontSize: '1.6rem' }}>Team A</h3>
+                            <h3 className="heading-font" style={{ fontSize: '1.2rem' }}>Team A</h3>
                         </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                             <div>
-                                <label style={{ fontSize: '0.85rem', color: 'var(--text-dim)', marginBottom: '8px', display: 'block', fontWeight: 600 }}>Người chơi 1</label>
+                                <label style={{ fontSize: '0.8rem', color: 'var(--text-dim)', marginBottom: '6px', display: 'block', fontWeight: 600 }}>Người chơi 1</label>
                                 <PlayerSelect
                                     value={p1}
                                     onChange={setP1}
@@ -446,7 +446,7 @@ const PlayerSelect: React.FC<{
                             </div>
                             {matchType === 'doubles' && (
                                 <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}>
-                                    <label style={{ fontSize: '0.85rem', color: 'var(--text-dim)', marginBottom: '8px', display: 'block', fontWeight: 600 }}>Người chơi 2</label>
+                                    <label style={{ fontSize: '0.8rem', color: 'var(--text-dim)', marginBottom: '6px', display: 'block', fontWeight: 600 }}>Người chơi 2</label>
                                     <PlayerSelect
                                         value={p1b}
                                         onChange={setP1b}
@@ -456,26 +456,26 @@ const PlayerSelect: React.FC<{
                                     />
                                 </motion.div>
                             )}
-                            <div style={{ marginTop: '12px' }}>
-                                <label style={{ fontSize: '0.85rem', color: 'var(--text-dim)', marginBottom: '8px', display: 'block', fontWeight: 600 }}>Số điểm</label>
+                            <div style={{ marginTop: '6px' }}>
+                                <label style={{ fontSize: '0.8rem', color: 'var(--text-dim)', marginBottom: '6px', display: 'block', fontWeight: 600 }}>Số điểm</label>
                                 <input type="number" value={s1} onChange={e => setS1(e.target.value === '' ? '' : Number(e.target.value))} placeholder="0"
-                                    style={{ width: '100%', fontSize: '2.5rem', height: '90px', textAlign: 'center', fontWeight: 900, fontFamily: 'var(--font-heading)', border: '2px solid hsla(var(--primary-neon-h), 100%, 50%, 0.2)', borderRadius: '24px' }}
+                                    style={{ width: '100%', fontSize: '1.6rem', height: '56px', textAlign: 'center', fontWeight: 900, fontFamily: 'var(--font-heading)', border: '2px solid hsla(var(--primary-neon-h), 100%, 50%, 0.2)', borderRadius: '14px', padding: '0.4rem' }}
                                 />
                             </div>
                         </div>
                     </motion.div>
 
                     {/* Team 2 */}
-                    <motion.div whileHover={{ y: -5 }} className="glass-card" style={{ padding: '32px', borderTop: '8px solid var(--secondary-neon)', borderRadius: '32px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px' }}>
-                            <div style={{ padding: '12px', background: 'hsla(var(--secondary-neon-h), 100%, 50%, 0.1)', borderRadius: '18px' }}>
-                                <Users color="var(--secondary-neon)" size={28} />
+                    <motion.div whileHover={{ y: -3 }} className="glass-card" style={{ padding: '20px', borderTop: '4px solid var(--secondary-neon)', borderRadius: '20px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+                            <div style={{ padding: '8px', background: 'hsla(var(--secondary-neon-h), 100%, 50%, 0.1)', borderRadius: '12px' }}>
+                                <Users color="var(--secondary-neon)" size={20} />
                             </div>
-                            <h3 className="heading-font" style={{ fontSize: '1.6rem' }}>Team B</h3>
+                            <h3 className="heading-font" style={{ fontSize: '1.2rem' }}>Team B</h3>
                         </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                             <div>
-                                <label style={{ fontSize: '0.85rem', color: 'var(--text-dim)', marginBottom: '8px', display: 'block', fontWeight: 600 }}>Người chơi 1</label>
+                                <label style={{ fontSize: '0.8rem', color: 'var(--text-dim)', marginBottom: '6px', display: 'block', fontWeight: 600 }}>Người chơi 1</label>
                                 <PlayerSelect
                                     value={p2}
                                     onChange={setP2}
@@ -486,7 +486,7 @@ const PlayerSelect: React.FC<{
                             </div>
                             {matchType === 'doubles' && (
                                 <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}>
-                                    <label style={{ fontSize: '0.85rem', color: 'var(--text-dim)', marginBottom: '8px', display: 'block', fontWeight: 600 }}>Người chơi 2</label>
+                                    <label style={{ fontSize: '0.8rem', color: 'var(--text-dim)', marginBottom: '6px', display: 'block', fontWeight: 600 }}>Người chơi 2</label>
                                     <PlayerSelect
                                         value={p2b}
                                         onChange={setP2b}
@@ -496,10 +496,10 @@ const PlayerSelect: React.FC<{
                                     />
                                 </motion.div>
                             )}
-                            <div style={{ marginTop: '12px' }}>
-                                <label style={{ fontSize: '0.85rem', color: 'var(--text-dim)', marginBottom: '8px', display: 'block', fontWeight: 600 }}>Số điểm</label>
+                            <div style={{ marginTop: '6px' }}>
+                                <label style={{ fontSize: '0.8rem', color: 'var(--text-dim)', marginBottom: '6px', display: 'block', fontWeight: 600 }}>Số điểm</label>
                                 <input type="number" value={s2} onChange={e => setS2(e.target.value === '' ? '' : Number(e.target.value))} placeholder="0"
-                                    style={{ width: '100%', fontSize: '2.5rem', height: '90px', textAlign: 'center', fontWeight: 900, fontFamily: 'var(--font-heading)', border: '2px solid hsla(var(--secondary-neon-h), 100%, 50%, 0.2)', borderRadius: '24px' }}
+                                    style={{ width: '100%', fontSize: '1.6rem', height: '56px', textAlign: 'center', fontWeight: 900, fontFamily: 'var(--font-heading)', border: '2px solid hsla(var(--secondary-neon-h), 100%, 50%, 0.2)', borderRadius: '14px', padding: '0.4rem' }}
                                 />
                             </div>
                         </div>

@@ -181,44 +181,44 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ onViewProfile }) => {
                         transition={{ delay: index * 0.05 }}
                         className="leaderboard-grid-row glass-card hover-row"
                         style={{
-                            padding: '20px 24px',
+                            padding: '10px 16px',
                             display: 'grid',
                             alignItems: 'center',
                             background: index < 3 ? 'hsla(var(--primary-neon-h), 100%, 50%, 0.03)' : 'transparent',
-                            borderRadius: '24px',
-                            border: index === 0 ? '2px solid gold' : '1px solid var(--glass-border)',
+                            borderRadius: '14px',
+                            border: index === 0 ? '1.5px solid gold' : '1px solid var(--glass-border)',
                             overflow: 'hidden',
-                            gap: '16px'
+                            gap: '12px'
                         }}
                     >
-                        <div style={{ display: 'flex', justifyContent: 'center', fontSize: '1.2rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'center', fontSize: '1rem' }}>
                             {getRankIcon(index)}
                         </div>
 
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
                             <div className="player-avatar" style={{
-                                width: '48px',
-                                height: '48px',
+                                width: '36px',
+                                height: '36px',
                                 flexShrink: 0,
-                                borderRadius: '16px',
+                                borderRadius: '12px',
                                 background: 'linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05))',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center'
                             }}>
-                                <User size={24} color="var(--primary-neon)" />
+                                <User size={18} color="var(--primary-neon)" />
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                                    <span className="player-name" style={{ fontWeight: 800, fontSize: '1.15rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{player.name}</span>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                                    <span className="player-name" style={{ fontWeight: 800, fontSize: '0.95rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{player.name}</span>
                                     {player.user_ad && (
-                                        <span style={{ fontSize: '0.7rem', color: 'var(--primary-neon)', background: 'rgba(0, 242, 255, 0.1)', padding: '2px 6px', borderRadius: '8px', fontWeight: 700 }}>
+                                        <span style={{ fontSize: '0.65rem', color: 'var(--primary-neon)', background: 'rgba(0, 242, 255, 0.1)', padding: '1px 5px', borderRadius: '6px', fontWeight: 700 }}>
                                             @{player.user_ad}
                                         </span>
                                     )}
                                 </div>
                                 {player.current_streak !== undefined && player.current_streak >= 2 && (
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#FF4500', fontSize: '0.7rem', fontWeight: 900 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#FF4500', fontSize: '0.65rem', fontWeight: 900 }}>
                                         🔥 {player.current_streak} CHUỖI THẮNG
                                     </div>
                                 )}
@@ -226,22 +226,22 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ onViewProfile }) => {
                         </div>
 
                         <div style={{ textAlign: 'right' }}>
-                            <div className="elo-text" style={{ color: 'var(--primary-neon)', fontWeight: 900, fontSize: '1.4rem', fontFamily: 'var(--font-heading)' }}>
+                            <div className="elo-text" style={{ color: 'var(--primary-neon)', fontWeight: 900, fontSize: '1.15rem', fontFamily: 'var(--font-heading)' }}>
                                 {player.elo_rating}
                             </div>
-                            <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', fontWeight: 700, textTransform: 'uppercase' }}>Elo</div>
+                            <div style={{ fontSize: '0.65rem', color: 'var(--text-dim)', fontWeight: 700, textTransform: 'uppercase' }}>Elo</div>
                         </div>
 
-                        <div className="hide-mobile" style={{ display: 'flex', justifyContent: 'flex-end', gap: '20px', textAlign: 'right' }}>
+                        <div className="hide-mobile" style={{ display: 'flex', justifyContent: 'flex-end', gap: '16px', textAlign: 'right' }}>
                             <div>
-                                <div style={{ fontWeight: 800, fontSize: '1rem' }}>{player.matches_played || 0}</div>
-                                <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', fontWeight: 600 }}>Trận</div>
+                                <div style={{ fontWeight: 800, fontSize: '0.85rem' }}>{player.matches_played || 0}</div>
+                                <div style={{ fontSize: '0.65rem', color: 'var(--text-dim)', fontWeight: 600 }}>Trận</div>
                             </div>
                             <div>
-                                <div style={{ fontWeight: 800, color: 'var(--success)', fontSize: '1rem' }}>
+                                <div style={{ fontWeight: 800, color: 'var(--success)', fontSize: '0.85rem' }}>
                                     {player.matches_played ? Math.round((player.wins / player.matches_played) * 100) : 0}%
                                 </div>
-                                <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', fontWeight: 600 }}>Thắng</div>
+                                <div style={{ fontSize: '0.65rem', color: 'var(--text-dim)', fontWeight: 600 }}>Thắng</div>
                             </div>
                         </div>
 
