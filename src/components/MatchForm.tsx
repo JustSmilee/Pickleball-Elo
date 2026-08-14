@@ -61,9 +61,10 @@ export const MatchForm: React.FC<MatchFormProps> = ({ onSuccess, onCancel, editi
 
 const compareVietnameseNames = (aName: string, bName: string): number => {
     const getSortKey = (fullName: string) => {
-        const parts = fullName.trim().split(/\s+/);
+        const cleanName = fullName.replace(/\s*\([^)]*\)\s*$/, '').trim();
+        const parts = cleanName.split(/\s+/);
         const givenName = parts[parts.length - 1] || '';
-        return `${givenName} ${fullName.trim()}`;
+        return `${givenName} ${cleanName}`;
     };
     return getSortKey(aName).localeCompare(getSortKey(bName), 'vi');
 };
