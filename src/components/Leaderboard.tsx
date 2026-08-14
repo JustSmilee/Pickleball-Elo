@@ -23,10 +23,13 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ onViewProfile }) => {
         setLoading(true);
         const fetchData = async () => {
             if (selectedTournamentId === 'global') {
-                const data = await playerService.getAllPlayers();
-                const playersWithStreaks = await Promise.all(data.map(async (p) => {
-                    const streak = await playerService.calculateWinStreak(p.id);
-                    return { ...p, current_streak: streak };
+                const [data, streakMap] = await Promise.all([
+                    playerService.getAllPlayers(),
+                    playerService.calculateAllWinStreaks()
+                ]);
+                const playersWithStreaks = data.map(p => ({
+                    ...p,
+                    current_streak: streakMap[p.id] || 0
                 }));
                 setPlayers(playersWithStreaks);
             } else {

@@ -83,6 +83,40 @@ export const playerService = {
             }
         }
         return streak;
+    },
+
+    async calculateAllWinStreaks(): Promise<Record<string, number>> {
+        if (!supabase) return {};
+        const { data, error } = await supabase
+            .from('matches')
+            .select('team1_player1_id, team1_player2_id, team2_player1_id, team2_player2_id, team1_score, team2_score')
+            .order('created_at', { ascending: false });
+
+        if (error || !data) return {};
+
+        const streaks: Record<string, number> = {};
+        const broken: Record<string, boolean> = {};
+
+        data.forEach((match: any) => {
+            const team1Won = match.team1_score > match.team2_score;
+            const team1Players = [match.team1_player1_id, match.team1_player2_id].filter(Boolean);
+            const team2Players = [match.team2_player1_id, match.team2_player2_id].filter(Boolean);
+
+            const updateStreak = (pid: string, won: boolean) => {
+                if (broken[pid]) return;
+                if (won) {
+                    streaks[pid] = (streaks[pid] || 0) + 1;
+                } else {
+                    broken[pid] = true;
+                    if (!streaks[pid]) streaks[pid] = 0;
+                }
+            };
+
+            team1Players.forEach(pid => updateStreak(pid, team1Won));
+            team2Players.forEach(pid => updateStreak(pid, !team1Won));
+        });
+
+        return streaks;
     }
 };
 
