@@ -59,6 +59,15 @@ export const MatchForm: React.FC<MatchFormProps> = ({ onSuccess, onCancel, editi
     }, [tournamentId]);
 
 
+const compareVietnameseNames = (aName: string, bName: string): number => {
+    const getSortKey = (fullName: string) => {
+        const parts = fullName.trim().split(/\s+/);
+        const givenName = parts[parts.length - 1] || '';
+        return `${givenName} ${fullName.trim()}`;
+    };
+    return getSortKey(aName).localeCompare(getSortKey(bName), 'vi');
+};
+
 const PlayerSelect: React.FC<{
     value: string;
     onChange: (id: string) => void;
@@ -71,7 +80,7 @@ const PlayerSelect: React.FC<{
 
     const selectedPlayer = availablePlayers.find(p => p.id === value);
 
-    const sortedPlayers = [...availablePlayers].sort((a, b) => a.name.localeCompare(b.name, 'vi'));
+    const sortedPlayers = [...availablePlayers].sort((a, b) => compareVietnameseNames(a.name, b.name));
 
     const filtered = sortedPlayers.filter(p =>
         p.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -233,7 +242,7 @@ const PlayerSelect: React.FC<{
         if (currentSelected && !available.some(p => p.id === currentSelected.id)) {
             available.push(currentSelected);
         }
-        return available.sort((a, b) => a.name.localeCompare(b.name, 'vi'));
+        return available.sort((a, b) => compareVietnameseNames(a.name, b.name));
     };
 
 
