@@ -89,15 +89,15 @@ const PlayerSelect: React.FC<{
     );
 
     return (
-        <div style={{ position: 'relative' }}>
+        <>
             <div
-                onClick={() => setIsOpen(!isOpen)}
+                onClick={() => setIsOpen(true)}
                 style={{
                     width: '100%',
-                    padding: '14px 18px',
-                    borderRadius: '18px',
+                    padding: '12px 16px',
+                    borderRadius: '14px',
                     background: '#1e2337',
-                    border: isOpen ? `2px solid ${accentColor}` : '1px solid var(--glass-border)',
+                    border: `1.5px solid ${value ? accentColor : 'var(--glass-border)'}`,
                     color: 'white',
                     cursor: 'pointer',
                     display: 'flex',
@@ -105,24 +105,24 @@ const PlayerSelect: React.FC<{
                     alignItems: 'center',
                     fontWeight: 700,
                     transition: 'all 0.2s ease',
-                    boxShadow: isOpen ? `0 0 12px ${accentColor}33` : 'none'
+                    boxShadow: value ? `0 0 10px ${accentColor}25` : 'none'
                 }}
             >
                 {selectedPlayer ? (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden', flex: 1 }}>
-                        <span style={{ fontWeight: 800, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                        <span style={{ fontWeight: 800, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', fontSize: '0.95rem' }}>
                             {selectedPlayer.name}
                         </span>
                         {selectedPlayer.user_ad && (
-                            <span style={{ fontSize: '0.75rem', color: accentColor, background: `${accentColor}18`, padding: '2px 8px', borderRadius: '8px', whiteSpace: 'nowrap' }}>
+                            <span style={{ fontSize: '0.7rem', color: accentColor, background: `${accentColor}18`, padding: '2px 6px', borderRadius: '6px', whiteSpace: 'nowrap', fontWeight: 700 }}>
                                 @{selectedPlayer.user_ad}
                             </span>
                         )}
                     </div>
                 ) : (
-                    <span style={{ color: 'var(--text-dim)', fontWeight: 500 }}>{placeholder}</span>
+                    <span style={{ color: 'var(--text-dim)', fontWeight: 500, fontSize: '0.9rem' }}>{placeholder}</span>
                 )}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
                     {selectedPlayer && (
                         <X
                             size={16}
@@ -131,64 +131,114 @@ const PlayerSelect: React.FC<{
                             style={{ cursor: 'pointer', opacity: 0.8 }}
                         />
                     )}
-                    <ChevronDown size={18} color="var(--text-dim)" style={{ transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+                    <ChevronDown size={18} color="var(--text-dim)" />
                 </div>
             </div>
 
             <AnimatePresence>
                 {isOpen && (
-                    <>
-                        <div
-                            style={{ position: 'fixed', inset: 0, zIndex: 499 }}
-                            onClick={() => setIsOpen(false)}
-                        />
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={() => { setIsOpen(false); setSearch(''); }}
+                        style={{
+                            position: 'fixed',
+                            inset: 0,
+                            zIndex: 2000,
+                            background: 'rgba(10, 12, 20, 0.85)',
+                            backdropFilter: 'blur(12px)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            padding: '16px'
+                        }}
+                    >
                         <motion.div
-                            initial={{ opacity: 0, y: -8, scale: 0.98 }}
-                            animate={{ opacity: 1, y: 4, scale: 1 }}
-                            exit={{ opacity: 0, y: -8, scale: 0.98 }}
-                            transition={{ duration: 0.15 }}
+                            initial={{ scale: 0.95, y: 15 }}
+                            animate={{ scale: 1, y: 0 }}
+                            exit={{ scale: 0.95, y: 15 }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="glass-card"
                             style={{
-                                position: 'absolute',
-                                top: '100%',
-                                left: 0,
-                                right: 0,
-                                zIndex: 500,
-                                background: '#151929',
-                                border: `1px solid ${accentColor}55`,
-                                borderRadius: '20px',
-                                padding: '12px',
-                                boxShadow: '0 12px 32px rgba(0, 0, 0, 0.7)',
-                                maxHeight: '280px',
+                                width: '100%',
+                                maxWidth: '520px',
+                                maxHeight: '82vh',
                                 display: 'flex',
                                 flexDirection: 'column',
-                                gap: '8px'
+                                padding: '20px',
+                                borderRadius: '24px',
+                                border: `1px solid ${accentColor}44`,
+                                background: '#121624',
+                                boxShadow: '0 20px 50px rgba(0,0,0,0.8)'
                             }}
                         >
-                            <div style={{ position: 'relative' }}>
+                            {/* Modal Header */}
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+                                <div style={{ fontWeight: 800, fontSize: '1.1rem', color: 'white', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <Search size={18} color={accentColor} />
+                                    <span>Chọn Vận Động Viên</span>
+                                </div>
+                                <button
+                                    onClick={() => { setIsOpen(false); setSearch(''); }}
+                                    style={{
+                                        background: 'rgba(255,255,255,0.08)',
+                                        border: 'none',
+                                        color: 'white',
+                                        cursor: 'pointer',
+                                        padding: '6px',
+                                        borderRadius: '10px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center'
+                                    }}
+                                >
+                                    <X size={18} />
+                                </button>
+                            </div>
+
+                            {/* Search Input Box */}
+                            <div style={{ position: 'relative', marginBottom: '12px' }}>
                                 <input
                                     autoFocus
                                     type="text"
                                     value={search}
                                     onChange={e => setSearch(e.target.value)}
-                                    placeholder="Tìm tên hoặc @userad..."
+                                    placeholder="Gõ tên hoặc @userad để tìm nhanh..."
                                     style={{
                                         width: '100%',
-                                        padding: '10px 14px 10px 34px',
-                                        borderRadius: '12px',
+                                        padding: '12px 38px 12px 38px',
+                                        borderRadius: '14px',
                                         background: '#1e2337',
-                                        border: `1px solid ${accentColor}44`,
+                                        border: `2px solid ${accentColor}`,
                                         color: 'white',
-                                        fontSize: '0.85rem',
-                                        outline: 'none'
+                                        fontSize: '0.95rem',
+                                        outline: 'none',
+                                        boxShadow: `0 0 12px ${accentColor}30`
                                     }}
                                 />
-                                <Search size={16} color="var(--text-dim)" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)' }} />
+                                <Search size={18} color={accentColor} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
+                                {search && (
+                                    <X
+                                        size={16}
+                                        color="var(--text-dim)"
+                                        onClick={() => setSearch('')}
+                                        style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', cursor: 'pointer' }}
+                                    />
+                                )}
                             </div>
 
-                            <div style={{ overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '4px', paddingRight: '2px' }}>
+                            {/* Info bar */}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 4px 8px', fontSize: '0.75rem', color: 'var(--text-dim)', fontWeight: 600 }}>
+                                <span>Sắp xếp A - Z theo Tên</span>
+                                <span>{filtered.length} VĐV khả dụng</span>
+                            </div>
+
+                            {/* Player List Container */}
+                            <div style={{ overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '6px', paddingRight: '4px' }}>
                                 {filtered.length === 0 ? (
-                                    <div style={{ padding: '12px', textAlign: 'center', color: 'var(--text-dim)', fontSize: '0.85rem' }}>
-                                        Không tìm thấy vận động viên nào
+                                    <div style={{ padding: '32px 16px', textAlign: 'center', color: 'var(--text-dim)', fontSize: '0.9rem' }}>
+                                        Không tìm thấy VĐV nào khớp với từ khóa "{search}"
                                     </div>
                                 ) : (
                                     filtered.map(p => (
@@ -200,9 +250,10 @@ const PlayerSelect: React.FC<{
                                                 setSearch('');
                                             }}
                                             style={{
-                                                padding: '10px 14px',
-                                                borderRadius: '12px',
-                                                background: value === p.id ? `${accentColor}20` : 'transparent',
+                                                padding: '12px 14px',
+                                                borderRadius: '14px',
+                                                background: value === p.id ? `${accentColor}25` : 'rgba(255,255,255,0.03)',
+                                                border: value === p.id ? `1px solid ${accentColor}` : '1px solid transparent',
                                                 color: 'white',
                                                 cursor: 'pointer',
                                                 display: 'flex',
@@ -210,29 +261,51 @@ const PlayerSelect: React.FC<{
                                                 justifyContent: 'space-between',
                                                 transition: 'all 0.15s'
                                             }}
-                                            onMouseEnter={e => (e.currentTarget.style.background = `${accentColor}15`)}
-                                            onMouseLeave={e => (e.currentTarget.style.background = value === p.id ? `${accentColor}20` : 'transparent')}
+                                            onMouseEnter={e => (e.currentTarget.style.background = `${accentColor}20`)}
+                                            onMouseLeave={e => (e.currentTarget.style.background = value === p.id ? `${accentColor}25` : 'rgba(255,255,255,0.03)')}
                                         >
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
-                                                <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>{p.name}</span>
-                                                {p.user_ad && (
-                                                    <span style={{ fontSize: '0.75rem', color: accentColor, opacity: 0.9 }}>
-                                                        @{p.user_ad}
-                                                    </span>
-                                                )}
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
+                                                <div style={{
+                                                    width: '34px',
+                                                    height: '34px',
+                                                    borderRadius: '10px',
+                                                    background: `${accentColor}20`,
+                                                    color: accentColor,
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    fontWeight: 900,
+                                                    fontSize: '0.9rem',
+                                                    flexShrink: 0
+                                                }}>
+                                                    {p.name[0].toUpperCase()}
+                                                </div>
+                                                <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                        <span style={{ fontWeight: 800, fontSize: '0.95rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</span>
+                                                        {p.user_ad && (
+                                                            <span style={{ fontSize: '0.7rem', color: accentColor, background: `${accentColor}18`, padding: '1px 5px', borderRadius: '5px', fontWeight: 700 }}>
+                                                                @{p.user_ad}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
                                             </div>
-                                            <span style={{ fontSize: '0.75rem', color: 'var(--text-dim)', fontWeight: 600, fontFamily: 'var(--font-heading)' }}>
-                                                {p.elo_rating} Elo
-                                            </span>
+                                            <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                                                <span style={{ fontSize: '0.85rem', color: 'white', fontWeight: 900, fontFamily: 'var(--font-heading)' }}>
+                                                    {p.elo_rating}
+                                                </span>
+                                                <span style={{ fontSize: '0.65rem', color: 'var(--text-dim)', marginLeft: '3px' }}>Elo</span>
+                                            </div>
                                         </div>
                                     ))
                                 )}
                             </div>
                         </motion.div>
-                    </>
+                    </motion.div>
                 )}
             </AnimatePresence>
-        </div>
+        </>
     );
 };
 
