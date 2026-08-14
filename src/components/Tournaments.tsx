@@ -147,6 +147,7 @@ export const Tournaments: React.FC = () => {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
+                        onClick={() => setSelectedTournament(null)}
                         style={{
                             position: 'fixed',
                             inset: 0,
@@ -156,13 +157,15 @@ export const Tournaments: React.FC = () => {
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            padding: '20px'
+                            padding: '20px',
+                            cursor: 'pointer'
                         }}
                     >
                         <motion.div
                             initial={{ scale: 0.9, y: 20 }}
                             animate={{ scale: 1, y: 0 }}
                             exit={{ scale: 0.9, y: 20 }}
+                            onClick={(e) => e.stopPropagation()}
                             className="glass-card"
                             style={{
                                 width: '100%',
@@ -171,7 +174,8 @@ export const Tournaments: React.FC = () => {
                                 overflowY: 'auto',
                                 padding: '32px',
                                 borderRadius: '32px',
-                                position: 'relative'
+                                position: 'relative',
+                                cursor: 'default'
                             }}
                         >
                             <button
