@@ -5,6 +5,8 @@ import { X, TrendingUp, Target, Award, Clock } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { motion } from 'framer-motion';
 
+import { getPlayerTier } from '../utils/tier';
+
 interface PlayerProfileProps {
     player: Player;
     onClose: () => void;
@@ -15,8 +17,12 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({ player, onClose })
     const [streak, setStreak] = useState(0);
     const [matches, setMatches] = useState<any[]>([]);
     const [bestPartner, setBestPartner] = useState<{ partner: Player; wins: number; total: number; winRate: number } | null>(null);
+    const [allElos, setAllElos] = useState<number[]>([]);
 
     useEffect(() => {
+        playerService.getAllPlayers().then(list => {
+            setAllElos(list.map(p => p.elo_rating).sort((a, b) => b - a));
+        });
         playerService.getPlayerEloTrend(player.id).then(data => {
             setTrend(data);
         });
@@ -30,6 +36,8 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({ player, onClose })
             setMatches(m);
         });
     }, [player.id]);
+
+    const tier = getPlayerTier(player.elo_rating, allElos);
 
     return (
         <motion.div
@@ -68,7 +76,25 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({ player, onClose })
                                         MBBANK: @{player.user_ad}
                                     </div>
                                 )}
-                                <div style={{ color: 'var(--primary-neon)', fontWeight: 800, fontSize: '1.2rem', fontFamily: 'var(--font-heading)', marginTop: '4px' }}>{player.elo_rating} ELO</div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px', flexWrap: 'wrap' }}>
+                                    <div style={{ color: 'var(--primary-neon)', fontWeight: 800, fontSize: '1.2rem', fontFamily: 'var(--font-heading)' }}>{player.elo_rating} ELO</div>
+                                    <span style={{
+                                        padding: '3px 10px',
+                                        borderRadius: '10px',
+                                        background: tier.bg,
+                                        border: `1px solid ${tier.border}`,
+                                        color: tier.color,
+                                        fontSize: '0.75rem',
+                                        fontWeight: 800,
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '4px'
+                                    }}>
+                                        <span>{tier.icon}</span>
+                                        <span>Hạng {tier.name}</span>
+                                        <span style={{ opacity: 0.8, fontSize: '0.7rem' }}>({tier.percentileLabel})</span>
+                                    </span>
+                                </div>
                             </div>
                         </div>
 

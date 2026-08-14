@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { getPlayerTier } from '../utils/tier';
 import { playerService, tournamentService } from '../services/api';
 import type { Player, Tournament } from '../types';
 import { Trophy, Medal, Star, User, BarChart2, Filter } from 'lucide-react';
@@ -173,57 +174,78 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ onViewProfile }) => {
 
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {filteredPlayers.map((player, index) => (
-                    <motion.div
-                        key={player.id}
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ delay: index * 0.05 }}
-                        className="leaderboard-grid-row glass-card hover-row"
-                        style={{
-                            padding: '10px 16px',
-                            display: 'grid',
-                            alignItems: 'center',
-                            background: index < 3 ? 'hsla(var(--primary-neon-h), 100%, 50%, 0.03)' : 'transparent',
-                            borderRadius: '14px',
-                            border: index === 0 ? '1.5px solid gold' : '1px solid var(--glass-border)',
-                            overflow: 'hidden',
-                            gap: '12px'
-                        }}
-                    >
-                        <div style={{ display: 'flex', justifyContent: 'center', fontSize: '1rem' }}>
-                            {getRankIcon(index)}
-                        </div>
-
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
-                            <div className="player-avatar" style={{
-                                width: '36px',
-                                height: '36px',
-                                flexShrink: 0,
-                                borderRadius: '12px',
-                                background: 'linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05))',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center'
-                            }}>
-                                <User size={18} color="var(--primary-neon)" />
-                            </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                                    <span className="player-name" style={{ fontWeight: 800, fontSize: '0.95rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{player.name}</span>
-                                    {player.user_ad && (
-                                        <span style={{ fontSize: '0.65rem', color: 'var(--primary-neon)', background: 'rgba(0, 242, 255, 0.1)', padding: '1px 5px', borderRadius: '6px', fontWeight: 700 }}>
-                                            @{player.user_ad}
-                                        </span>
-                                    )}
+                {(() => {
+                    const allElosSortedDesc = players.map(p => p.elo_rating).sort((a, b) => b - a);
+                    return filteredPlayers.map((player, index) => {
+                        const tier = getPlayerTier(player.elo_rating, allElosSortedDesc);
+                        return (
+                            <motion.div
+                                key={player.id}
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ delay: index * 0.05 }}
+                                className="leaderboard-grid-row glass-card hover-row"
+                                style={{
+                                    padding: '10px 16px',
+                                    display: 'grid',
+                                    alignItems: 'center',
+                                    background: index < 3 ? 'hsla(var(--primary-neon-h), 100%, 50%, 0.03)' : 'transparent',
+                                    borderRadius: '14px',
+                                    border: index === 0 ? '1.5px solid gold' : '1px solid var(--glass-border)',
+                                    overflow: 'hidden',
+                                    gap: '12px'
+                                }}
+                            >
+                                <div style={{ display: 'flex', justifyContent: 'center', fontSize: '1rem' }}>
+                                    {getRankIcon(index)}
                                 </div>
-                                {player.current_streak !== undefined && player.current_streak >= 2 && (
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#FF4500', fontSize: '0.65rem', fontWeight: 900 }}>
-                                        🔥 {player.current_streak} CHUỖI THẮNG
+
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
+                                    <div className="player-avatar" style={{
+                                        width: '36px',
+                                        height: '36px',
+                                        flexShrink: 0,
+                                        borderRadius: '12px',
+                                        background: 'linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05))',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center'
+                                    }}>
+                                        <User size={18} color="var(--primary-neon)" />
                                     </div>
-                                )}
-                            </div>
-                        </div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                                            <span className="player-name" style={{ fontWeight: 800, fontSize: '0.95rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{player.name}</span>
+                                            {player.user_ad && (
+                                                <span style={{ fontSize: '0.65rem', color: 'var(--primary-neon)', background: 'rgba(0, 242, 255, 0.1)', padding: '1px 5px', borderRadius: '6px', fontWeight: 700 }}>
+                                                    @{player.user_ad}
+                                                </span>
+                                            )}
+                                            {/* Percentile Rank Tier Badge */}
+                                            <span style={{
+                                                fontSize: '0.65rem',
+                                                fontWeight: 800,
+                                                color: tier.color,
+                                                background: tier.bg,
+                                                border: `1px solid ${tier.border}`,
+                                                padding: '1px 6px',
+                                                borderRadius: '6px',
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                gap: '3px',
+                                                whiteSpace: 'nowrap'
+                                            }}>
+                                                <span>{tier.icon}</span>
+                                                <span>{tier.name}</span>
+                                            </span>
+                                        </div>
+                                        {player.current_streak !== undefined && player.current_streak >= 2 && (
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#FF4500', fontSize: '0.65rem', fontWeight: 900 }}>
+                                                🔥 {player.current_streak} CHUỖI THẮNG
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
 
                         <div style={{ textAlign: 'right' }}>
                             <div className="elo-text" style={{ color: 'var(--primary-neon)', fontWeight: 900, fontSize: '1.15rem', fontFamily: 'var(--font-heading)' }}>
@@ -262,7 +284,9 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ onViewProfile }) => {
                             </button>
                         </div>
                     </motion.div>
-                ))}
+                );
+            });
+        })()}
             </div>
 
             <style>{`
