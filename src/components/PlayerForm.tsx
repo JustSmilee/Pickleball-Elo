@@ -2,6 +2,16 @@ import React, { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { UserPlus } from 'lucide-react';
 
+export function formatVietnameseTitleCase(str: string): string {
+    if (!str) return '';
+    return str
+        .trim()
+        .toLowerCase()
+        .split(/\s+/)
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
+}
+
 export const PlayerForm: React.FC<{ onSuccess: () => void }> = ({ onSuccess }) => {
     const [name, setName] = useState('');
     const [userAd, setUserAd] = useState('');
@@ -11,13 +21,16 @@ export const PlayerForm: React.FC<{ onSuccess: () => void }> = ({ onSuccess }) =
         e.preventDefault();
         if (!name.trim()) return;
 
+        const formattedName = formatVietnameseTitleCase(name);
+        const formattedUserAd = userAd.trim() ? userAd.trim().toLowerCase() : null;
+
         setLoading(true);
         try {
             const { error } = await supabase
                 .from('players')
                 .insert([{ 
-                    name, 
-                    user_ad: userAd.trim() || null,
+                    name: formattedName, 
+                    user_ad: formattedUserAd,
                     elo_rating: 1200, 
                     matches_played: 0, 
                     wins: 0, 
