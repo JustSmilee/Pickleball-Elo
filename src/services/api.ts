@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import type { Player, Match, TournamentPlayerStats } from '../types';
+import type { Player, Match, TournamentPlayerStats, TournamentFormat, TournamentFixture, TournamentStandingsRow } from '../types';
 import { calculateEloDelta } from '../utils/elo';
 
 
@@ -287,10 +287,34 @@ export const tournamentService = {
         return data || [];
     },
 
-    async createTournament(name: string): Promise<void> {
-        if (!supabase) return;
-        const { error } = await supabase.from('tournaments').insert([{ name }]);
+    async createTournament(
+        name: string,
+        format: TournamentFormat = 'elo_only',
+        _participantIds: string[] = [],
+        customFixtures: TournamentFixture[] = []
+    ): Promise<any> {
+        if (!supabase) return null;
+
+        const { data: tourney, error } = await supabase
+            .from('tournaments')
+            .insert([{
+                name,
+                format,
+                status: 'active',
+                start_date: new Date().toISOString()
+            }])
+            .select()
+            .single();
+
         if (error) throw error;
+
+        // If fixtures were generated, store them in localStorage / database metadata
+        if (customFixtures && customFixtures.length > 0) {
+            const localStorageKey = `tournament_fixtures_${tourney.id}`;
+            localStorage.setItem(localStorageKey, JSON.stringify(customFixtures));
+        }
+
+        return tourney;
     },
 
     async getTournamentLeaderboard(tournamentId: string): Promise<TournamentPlayerStats[]> {
@@ -391,6 +415,205 @@ export const tournamentService = {
 
         if (error) throw error;
         return data || [];
+    },
+
+    getTournamentFixtures(tournamentId: string): TournamentFixture[] {
+        const raw = localStorage.getItem(`tournament_fixtures_${tournamentId}`);
+        if (!raw) return [];
+        try {
+            return JSON.parse(raw);
+        } catch {
+            return [];
+        }
+    },
+
+    saveTournamentFixtures(tournamentId: string, fixtures: TournamentFixture[]): void {
+        localStorage.setItem(`tournament_fixtures_${tournamentId}`, JSON.stringify(fixtures));
+    },
+
+    generateRoundRobinFixtures(tournamentId: string, enrolledPlayers: { id: string; name: string }[]): TournamentFixture[] {
+        const fixtures: TournamentFixture[] = [];
+        const list = [...enrolledPlayers];
+        if (list.length % 2 !== 0) {
+            list.push({ id: 'BYE', name: 'Nghỉ' });
+        }
+
+        const numPlayers = list.length;
+        const numRounds = numPlayers - 1;
+        const half = numPlayers / 2;
+
+        let matchCounter = 1;
+
+        for (let round = 0; round < numRounds; round++) {
+            for (let i = 0; i < half; i++) {
+                const p1 = list[i];
+                const p2 = list[numPlayers - 1 - i];
+
+                if (p1.id !== 'BYE' && p2.id !== 'BYE') {
+                    fixtures.push({
+                        id: `fix_${tournamentId}_r${round + 1}_m${matchCounter++}`,
+                        tournament_id: tournamentId,
+                        round: round + 1,
+                        match_index: matchCounter,
+                        player1_id: p1.id,
+                        player1_name: p1.name,
+                        player2_id: p2.id,
+                        player2_name: p2.name,
+                        status: 'pending'
+                    });
+                }
+            }
+            // Rotate array keeping list[0] fixed
+            list.splice(1, 0, list.pop()!);
+        }
+
+        return fixtures;
+    },
+
+    generateKnockoutFixtures(tournamentId: string, enrolledPlayers: { id: string; name: string }[]): TournamentFixture[] {
+        const fixtures: TournamentFixture[] = [];
+        const n = enrolledPlayers.length;
+
+        if (n < 2) return [];
+
+        // Determine number of rounds needed (e.g. 4 players -> 2 rounds: Semis, Final)
+        let numRounds = Math.ceil(Math.log2(n));
+        let totalSlots = Math.pow(2, numRounds); // e.g. 4 or 8
+
+        // Seed players into round 1
+
+        // Create placeholders for all rounds
+        let globalIndex = 1;
+        const roundFixturesMap: Record<number, TournamentFixture[]> = {};
+
+        for (let r = 1; r <= numRounds; r++) {
+            const matchesInRound = totalSlots / Math.pow(2, r);
+            roundFixturesMap[r] = [];
+
+            for (let m = 0; m < matchesInRound; m++) {
+                const fix: TournamentFixture = {
+                    id: `fix_ko_${tournamentId}_r${r}_m${m + 1}`,
+                    tournament_id: tournamentId,
+                    round: r,
+                    match_index: globalIndex++,
+                    status: 'pending'
+                };
+                roundFixturesMap[r].push(fix);
+            }
+        }
+
+        // Link next_fixture_id in knockout tree
+        for (let r = 1; r < numRounds; r++) {
+            const currentRound = roundFixturesMap[r];
+            const nextRound = roundFixturesMap[r + 1];
+
+            currentRound.forEach((fix, i) => {
+                const nextMatch = nextRound[Math.floor(i / 2)];
+                if (nextMatch) {
+                    fix.next_fixture_id = nextMatch.id;
+                }
+            });
+        }
+
+        // Populate round 1 with players
+        roundFixturesMap[1].forEach((fix, i) => {
+            const p1 = enrolledPlayers[i * 2];
+            const p2 = enrolledPlayers[i * 2 + 1];
+
+            if (p1) {
+                fix.player1_id = p1.id;
+                fix.player1_name = p1.name;
+            }
+            if (p2) {
+                fix.player2_id = p2.id;
+                fix.player2_name = p2.name;
+            }
+        });
+
+        // Flatten all fixtures into list
+        for (let r = 1; r <= numRounds; r++) {
+            fixtures.push(...roundFixturesMap[r]);
+        }
+
+        return fixtures;
+    },
+
+    recordFixtureScore(tournamentId: string, fixtureId: string, score1: number, score2: number): TournamentFixture[] {
+        const fixtures = this.getTournamentFixtures(tournamentId);
+        const fix = fixtures.find(f => f.id === fixtureId);
+        if (!fix) return fixtures;
+
+        fix.score1 = score1;
+        fix.score2 = score2;
+        fix.status = 'completed';
+        fix.winner_id = score1 > score2 ? fix.player1_id : fix.player2_id;
+
+        // If knockout format, advance winner to next fixture
+        if (fix.next_fixture_id && fix.winner_id) {
+            const nextFix = fixtures.find(f => f.id === fix.next_fixture_id);
+            const winnerName = score1 > score2 ? fix.player1_name : fix.player2_name;
+
+            if (nextFix) {
+                if (!nextFix.player1_id) {
+                    nextFix.player1_id = fix.winner_id;
+                    nextFix.player1_name = winnerName;
+                } else if (!nextFix.player2_id) {
+                    nextFix.player2_id = fix.winner_id;
+                    nextFix.player2_name = winnerName;
+                }
+            }
+        }
+
+        this.saveTournamentFixtures(tournamentId, fixtures);
+        return fixtures;
+    },
+
+    calculateRoundRobinStandings(fixtures: TournamentFixture[], players: Player[]): TournamentStandingsRow[] {
+        const map: Record<string, TournamentStandingsRow> = {};
+
+        players.forEach(p => {
+            map[p.id] = {
+                playerId: p.id,
+                name: p.name,
+                user_ad: p.user_ad,
+                played: 0,
+                wins: 0,
+                losses: 0,
+                points: 0,
+                scoreDiff: 0
+            };
+        });
+
+        fixtures.filter(f => f.status === 'completed').forEach(f => {
+            if (!f.player1_id || !f.player2_id || f.score1 === undefined || f.score2 === undefined) return;
+
+            const p1 = map[f.player1_id];
+            const p2 = map[f.player2_id];
+
+            if (p1 && p2) {
+                p1.played += 1;
+                p2.played += 1;
+                p1.scoreDiff += (f.score1 - f.score2);
+                p2.scoreDiff += (f.score2 - f.score1);
+
+                if (f.score1 > f.score2) {
+                    p1.wins += 1;
+                    p1.points += 3;
+                    p2.losses += 1;
+                } else if (f.score2 > f.score1) {
+                    p2.wins += 1;
+                    p2.points += 3;
+                    p1.losses += 1;
+                } else {
+                    p1.points += 1;
+                    p2.points += 1;
+                }
+            }
+        });
+
+        return Object.values(map)
+            .filter(r => r.played > 0)
+            .sort((a, b) => b.points - a.points || b.wins - a.wins || b.scoreDiff - a.scoreDiff);
     }
 };
 
