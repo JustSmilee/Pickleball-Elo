@@ -6,6 +6,98 @@ import { Trophy, Plus, Calendar, CheckCircle2, Circle, X, Medal, ArrowRight, Git
 
 import { motion, AnimatePresence } from 'framer-motion';
 
+// ─── Module-level static lookup: playerId → team info ────────────────────────
+const PLAYER_TEAM_MAP: Record<string, { teamId: string; teamName: string; color: string; badgeBg: string }> = {};
+Object.values(DEFAULT_TEAM_ROSTERS).forEach(roster => {
+    roster.memberIds.forEach(pid => {
+        PLAYER_TEAM_MAP[pid] = { teamId: roster.id, teamName: roster.name, color: roster.color, badgeBg: roster.badgeBg };
+    });
+});
+
+// ─── Rank icon helper (module level) ─────────────────────────────────────────
+const getRankIconStatic = (index: number) => {
+    switch (index) {
+        case 0: return <Trophy color="#FFD700" size={18} fill="#FFD700" />;
+        case 1: return <Medal color="#C0C0C0" size={18} fill="#C0C0C0" />;
+        case 2: return <Medal color="#CD7F32" size={18} fill="#CD7F32" />;
+        default: return <span style={{ color: 'var(--text-dim)', fontWeight: 700, fontSize: '0.8rem' }}>#{index + 1}</span>;
+    }
+};
+
+// ─── PlayerLeaderboardList (top-level component, no hooks issue) ──────────────
+const PlayerLeaderboardList: React.FC<{ players: TournamentPlayerStats[]; showTeamColors?: boolean }> = ({ players: playerList, showTeamColors = false }) => (
+    playerList.length === 0 ? (
+        <div style={{ padding: '32px 20px', textAlign: 'center', color: 'var(--text-dim)', background: 'rgba(255,255,255,0.02)', borderRadius: '16px', fontSize: '0.85rem', border: '1px dashed rgba(255,255,255,0.08)' }}>
+            📭 Chưa có trận đấu nào được ghi nhận cho giải này.
+        </div>
+    ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {playerList.map((player, idx) => {
+                const teamInfo = showTeamColors ? PLAYER_TEAM_MAP[player.playerId] : undefined;
+                return (
+                    <motion.div
+                        key={player.playerId}
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: idx * 0.04 }}
+                        style={{
+                            padding: '12px 16px',
+                            background: idx === 0
+                                ? 'linear-gradient(135deg, rgba(255,215,0,0.08), rgba(255,215,0,0.02))'
+                                : idx < 3 ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.02)',
+                            border: teamInfo
+                                ? `1px solid ${teamInfo.color}40`
+                                : (idx === 0 ? '1px solid rgba(255,215,0,0.3)' : '1px solid var(--glass-border)'),
+                            borderRadius: '14px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between'
+                        }}
+                    >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <div style={{ width: '28px', textAlign: 'center', flexShrink: 0 }}>
+                                {getRankIconStatic(idx)}
+                            </div>
+                            <div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                    <span style={{ fontWeight: 800, color: 'white', fontSize: '0.9rem' }}>{player.name}</span>
+                                    {player.user_ad && <span style={{ fontSize: '0.7rem', color: 'var(--primary-neon)' }}>@{player.user_ad}</span>}
+                                    {teamInfo && (
+                                        <span style={{
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            padding: '1px 8px',
+                                            borderRadius: '8px',
+                                            fontSize: '0.65rem',
+                                            fontWeight: 900,
+                                            background: teamInfo.badgeBg,
+                                            color: teamInfo.color,
+                                            border: `1px solid ${teamInfo.color}50`,
+                                            letterSpacing: '0.06em',
+                                            textTransform: 'uppercase',
+                                        }}>
+                                            {teamInfo.teamName}
+                                        </span>
+                                    )}
+                                </div>
+                                <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', marginTop: '1px' }}>
+                                    {player.matches_played} trận · {player.wins} thắng · {player.losses} thua
+                                </div>
+                            </div>
+                        </div>
+                        <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                            <div style={{ fontWeight: 900, color: teamInfo ? teamInfo.color : 'var(--primary-neon)', fontSize: '1.05rem', fontFamily: 'var(--font-heading)' }}>
+                                {player.elo_rating}
+                            </div>
+                            <div style={{ fontSize: '0.6rem', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>ELO</div>
+                        </div>
+                    </motion.div>
+                );
+            })}
+        </div>
+    )
+);
+
 export const Tournaments: React.FC = () => {
     const [tournaments, setTournaments] = useState<Tournament[]>([]);
     const [players, setPlayers] = useState<Player[]>([]);
@@ -242,91 +334,6 @@ export const Tournaments: React.FC = () => {
                 }} />
             ))}
         </div>
-    );
-
-    // ─── PLAYER LEADERBOARD LIST ─────────────────────────────────────────────────
-    // Build a quick lookup: playerId → team roster info
-    const playerTeamMap = React.useMemo(() => {
-        const map: Record<string, { teamId: string; teamName: string; color: string; badgeBg: string }> = {};
-        Object.values(DEFAULT_TEAM_ROSTERS).forEach(roster => {
-            roster.memberIds.forEach(pid => {
-                map[pid] = { teamId: roster.id, teamName: roster.name, color: roster.color, badgeBg: roster.badgeBg };
-            });
-        });
-        return map;
-    }, []);
-
-    const PlayerLeaderboardList = ({ players: playerList, showTeamColors = false }: { players: TournamentPlayerStats[]; showTeamColors?: boolean }) => (
-        playerList.length === 0 ? (
-            <div style={{ padding: '32px 20px', textAlign: 'center', color: 'var(--text-dim)', background: 'rgba(255,255,255,0.02)', borderRadius: '16px', fontSize: '0.85rem', border: '1px dashed rgba(255,255,255,0.08)' }}>
-                📭 Chưa có trận đấu nào được ghi nhận cho giải này.
-            </div>
-        ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {playerList.map((player, idx) => {
-                    const teamInfo = showTeamColors ? playerTeamMap[player.playerId] : undefined;
-                    return (
-                    <motion.div
-                        key={player.playerId}
-                        initial={{ opacity: 0, y: 8 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: idx * 0.04 }}
-                        style={{
-                            padding: '12px 16px',
-                            background: idx === 0
-                                ? 'linear-gradient(135deg, rgba(255,215,0,0.08), rgba(255,215,0,0.02))'
-                                : idx < 3 ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.02)',
-                            border: teamInfo
-                                ? `1px solid ${teamInfo.color}40`
-                                : (idx === 0 ? '1px solid rgba(255,215,0,0.3)' : '1px solid var(--glass-border)'),
-                            borderRadius: '14px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between'
-                        }}
-                    >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                            <div style={{ width: '28px', textAlign: 'center', flexShrink: 0 }}>
-                                {getRankIcon(idx)}
-                            </div>
-                            <div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                                    <span style={{ fontWeight: 800, color: 'white', fontSize: '0.9rem' }}>{player.name}</span>
-                                    {player.user_ad && <span style={{ fontSize: '0.7rem', color: 'var(--primary-neon)' }}>@{player.user_ad}</span>}
-                                    {teamInfo && (
-                                        <span style={{
-                                            display: 'inline-flex',
-                                            alignItems: 'center',
-                                            padding: '1px 8px',
-                                            borderRadius: '8px',
-                                            fontSize: '0.65rem',
-                                            fontWeight: 900,
-                                            background: teamInfo.badgeBg,
-                                            color: teamInfo.color,
-                                            border: `1px solid ${teamInfo.color}50`,
-                                            letterSpacing: '0.06em',
-                                            textTransform: 'uppercase',
-                                        }}>
-                                            {teamInfo.teamName}
-                                        </span>
-                                    )}
-                                </div>
-                                <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', marginTop: '1px' }}>
-                                    {player.matches_played} trận · {player.wins} thắng · {player.losses} thua
-                                </div>
-                            </div>
-                        </div>
-                        <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                            <div style={{ fontWeight: 900, color: teamInfo ? teamInfo.color : 'var(--primary-neon)', fontSize: '1.05rem', fontFamily: 'var(--font-heading)' }}>
-                                {player.elo_rating}
-                            </div>
-                            <div style={{ fontSize: '0.6rem', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>ELO</div>
-                        </div>
-                    </motion.div>
-                    );
-                })}
-            </div>
-        )
     );
 
     return (
