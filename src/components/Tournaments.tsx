@@ -34,6 +34,15 @@ const PlayerLeaderboardList: React.FC<{ players: TournamentPlayerStats[]; showTe
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {playerList.map((player, idx) => {
                 const teamInfo = showTeamColors ? PLAYER_TEAM_MAP[player.playerId] : undefined;
+                const cardBg = teamInfo
+                    ? `linear-gradient(135deg, ${teamInfo.badgeBg}, rgba(22, 25, 40, 0.75))`
+                    : (idx === 0
+                        ? 'linear-gradient(135deg, rgba(255,215,0,0.08), rgba(255,215,0,0.02))'
+                        : idx < 3 ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.02)');
+                const cardBorder = teamInfo
+                    ? `1px solid ${teamInfo.color}45`
+                    : (idx === 0 ? '1px solid rgba(255,215,0,0.3)' : '1px solid var(--glass-border)');
+
                 return (
                     <motion.div
                         key={player.playerId}
@@ -42,12 +51,9 @@ const PlayerLeaderboardList: React.FC<{ players: TournamentPlayerStats[]; showTe
                         transition={{ delay: idx * 0.04 }}
                         style={{
                             padding: '12px 16px',
-                            background: idx === 0
-                                ? 'linear-gradient(135deg, rgba(255,215,0,0.08), rgba(255,215,0,0.02))'
-                                : idx < 3 ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.02)',
-                            border: teamInfo
-                                ? `1px solid ${teamInfo.color}40`
-                                : (idx === 0 ? '1px solid rgba(255,215,0,0.3)' : '1px solid var(--glass-border)'),
+                            background: cardBg,
+                            border: cardBorder,
+                            borderLeft: teamInfo ? `4px solid ${teamInfo.color}` : (idx === 0 ? '4px solid gold' : undefined),
                             borderRadius: '14px',
                             display: 'flex',
                             alignItems: 'center',
@@ -66,27 +72,27 @@ const PlayerLeaderboardList: React.FC<{ players: TournamentPlayerStats[]; showTe
                                         <span style={{
                                             display: 'inline-flex',
                                             alignItems: 'center',
-                                            padding: '1px 8px',
+                                            padding: '2px 8px',
                                             borderRadius: '8px',
                                             fontSize: '0.65rem',
                                             fontWeight: 900,
-                                            background: teamInfo.badgeBg,
-                                            color: teamInfo.color,
-                                            border: `1px solid ${teamInfo.color}50`,
-                                            letterSpacing: '0.06em',
+                                            background: teamInfo.color,
+                                            color: '#000',
+                                            letterSpacing: '0.04em',
                                             textTransform: 'uppercase',
+                                            boxShadow: `0 2px 8px ${teamInfo.color}40`
                                         }}>
                                             {teamInfo.teamName}
                                         </span>
                                     )}
                                 </div>
-                                <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', marginTop: '1px' }}>
+                                <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', marginTop: '2px' }}>
                                     {player.matches_played} trận · {player.wins} thắng · {player.losses} thua
                                 </div>
                             </div>
                         </div>
                         <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                            <div style={{ fontWeight: 900, color: teamInfo ? teamInfo.color : 'var(--primary-neon)', fontSize: '1.05rem', fontFamily: 'var(--font-heading)' }}>
+                            <div style={{ fontWeight: 900, color: teamInfo ? teamInfo.color : 'var(--primary-neon)', fontSize: '1.1rem', fontFamily: 'var(--font-heading)' }}>
                                 {player.elo_rating}
                             </div>
                             <div style={{ fontSize: '0.6rem', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>ELO</div>
@@ -914,9 +920,31 @@ export const Tournaments: React.FC = () => {
                                             {/* INDIVIDUAL ELO */}
                                             {teamTab === 'individual' && (
                                                 <div>
-                                                    <h3 style={{ fontSize: '0.95rem', fontWeight: 800, marginBottom: '14px', color: 'white' }}>
-                                                        🏆 Bảng Xếp Hạng Elo Cá Nhân ({tLeaderboard.length} VĐV)
-                                                    </h3>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px', marginBottom: '14px' }}>
+                                                        <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: 'white', margin: 0 }}>
+                                                            🏆 Bảng Xếp Hạng Elo Cá Nhân ({tLeaderboard.length} VĐV)
+                                                        </h3>
+                                                        {/* Team Color Legend */}
+                                                        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                                                            {Object.values(DEFAULT_TEAM_ROSTERS).map(roster => (
+                                                                <span key={roster.id} style={{
+                                                                    display: 'inline-flex',
+                                                                    alignItems: 'center',
+                                                                    gap: '5px',
+                                                                    padding: '3px 9px',
+                                                                    borderRadius: '8px',
+                                                                    background: roster.badgeBg,
+                                                                    border: `1px solid ${roster.color}40`,
+                                                                    color: roster.color,
+                                                                    fontSize: '0.7rem',
+                                                                    fontWeight: 800
+                                                                }}>
+                                                                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: roster.color, display: 'inline-block' }} />
+                                                                    {roster.name}
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    </div>
                                                     <PlayerLeaderboardList players={tLeaderboard} showTeamColors={true} />
                                                 </div>
                                             )}
