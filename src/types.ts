@@ -49,10 +49,10 @@ export interface TeamMinigameStats {
   scoreDiff: number;
   matchPoints: number; // +1 per win
   weeklyBonus: number; // +2 per week won
-  penalties: number; // deduction points
-  totalPoints: number; // matchPoints + weeklyBonus - penalties
+  totalPoints: number; // matchPoints + weeklyBonus
   weeklyWins: Record<number, number>; // week number (1,2,3) -> count of wins against matchup opponent
 }
+
 
 export interface WeeklyMatchupSummary {
   week: number;

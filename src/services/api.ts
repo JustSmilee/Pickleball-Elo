@@ -721,16 +721,9 @@ export const tournamentService = {
                 scoreDiff: 0,
                 matchPoints: 0,
                 weeklyBonus: 0,
-                penalties: 0,
                 totalPoints: 0,
                 weeklyWins: { 1: 0, 2: 0, 3: 0 }
             };
-        });
-
-        const rawPenalties = localStorage.getItem(`tournament_penalties_${tournamentId}`);
-        const penalties: Record<string, number> = rawPenalties ? JSON.parse(rawPenalties) : {};
-        Object.keys(penalties).forEach(tId => {
-            if (stats[tId]) stats[tId].penalties = penalties[tId] || 0;
         });
 
         // Weekly matchup tracking:
@@ -745,7 +738,6 @@ export const tournamentService = {
 
         matches.forEach((m: any) => {
             const t1 = playerToTeam.get(m.team1_player1_id) || playerToTeam.get(m.team1_player2_id || '');
-
             const t2 = playerToTeam.get(m.team2_player1_id) || playerToTeam.get(m.team2_player2_id || '');
 
             if (!t1 || !t2 || t1 === t2) return;
@@ -840,7 +832,7 @@ export const tournamentService = {
 
         // Total points calculation
         Object.values(stats).forEach(st => {
-            st.totalPoints = st.matchPoints + st.weeklyBonus - st.penalties;
+            st.totalPoints = st.matchPoints + st.weeklyBonus;
         });
 
         return Object.values(stats).sort((a, b) =>
@@ -848,18 +840,8 @@ export const tournamentService = {
             b.wins - a.wins ||
             b.scoreDiff - a.scoreDiff
         );
-    },
-
-    getTeamPenalties(tournamentId: string): Record<string, number> {
-        const raw = localStorage.getItem(`tournament_penalties_${tournamentId}`);
-        return raw ? JSON.parse(raw) : {};
-    },
-
-    setTeamPenalty(tournamentId: string, teamId: string, penalty: number): void {
-        const penalties = this.getTeamPenalties(tournamentId);
-        penalties[teamId] = Math.max(0, penalty);
-        localStorage.setItem(`tournament_penalties_${tournamentId}`, JSON.stringify(penalties));
     }
 };
+
 
 

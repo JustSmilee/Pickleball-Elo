@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { tournamentService, playerService, DEFAULT_TEAM_ROSTERS } from '../services/api';
 import type { Tournament, TournamentPlayerStats, TournamentFormat, TournamentFixture, TournamentStandingsRow, Player, TeamMinigameStats } from '../types';
-import { Trophy, Plus, Calendar, CheckCircle2, Circle, X, Medal, ArrowRight, GitBranch, Repeat, Check, Users, BookOpen, ShieldAlert, Award, Settings } from 'lucide-react';
+import { Trophy, Plus, Calendar, CheckCircle2, Circle, X, Medal, ArrowRight, GitBranch, Repeat, Check, Users, BookOpen, ShieldAlert, Award } from 'lucide-react';
+
+
 import { motion, AnimatePresence } from 'framer-motion';
 
 export const Tournaments: React.FC = () => {
@@ -28,11 +30,6 @@ export const Tournaments: React.FC = () => {
     const [rrStandings, setRrStandings] = useState<TournamentStandingsRow[]>([]);
     const [loadingDetail, setLoadingDetail] = useState(false);
 
-    // Penalty Modal State
-    const [showPenaltyModal, setShowPenaltyModal] = useState(false);
-    const [penaltyTeamId, setPenaltyTeamId] = useState<string>('A');
-    const [penaltyValue, setPenaltyValue] = useState<number>(0);
-
     // Score Entry Modal State
     const [activeFixture, setActiveFixture] = useState<TournamentFixture | null>(null);
     const [score1, setScore1] = useState<number | ''>('');
@@ -42,6 +39,7 @@ export const Tournaments: React.FC = () => {
         fetchTournaments();
         playerService.getAllPlayers().then(setPlayers).catch(console.error);
     }, []);
+
 
     const fetchTournaments = () => {
         tournamentService.getAllTournaments().then(data => {
@@ -123,16 +121,8 @@ export const Tournaments: React.FC = () => {
         }
     };
 
-    const handleSavePenalty = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!selectedTournament) return;
-        tournamentService.setTeamPenalty(selectedTournament.id, penaltyTeamId, Number(penaltyValue));
-        const updated = await tournamentService.getTeamMinigameStandings(selectedTournament.id);
-        setTeamStandings(updated);
-        setShowPenaltyModal(false);
-    };
-
     const handleSaveFixtureScore = (e: React.FormEvent) => {
+
         e.preventDefault();
         if (!selectedTournament || !activeFixture || score1 === '' || score2 === '') return;
 
@@ -502,28 +492,10 @@ export const Tournaments: React.FC = () => {
 
                                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                                         <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'white' }}>Bảng Xếp Hạng Đồng Đội Lũy Kế</h3>
-                                                        <button
-                                                            onClick={() => setShowPenaltyModal(true)}
-                                                            style={{
-                                                                padding: '6px 12px',
-                                                                borderRadius: '10px',
-                                                                border: '1px solid rgba(239, 68, 68, 0.4)',
-                                                                background: 'rgba(239, 68, 68, 0.1)',
-                                                                color: '#ef4444',
-                                                                fontSize: '0.75rem',
-                                                                fontWeight: 800,
-                                                                cursor: 'pointer',
-                                                                display: 'flex',
-                                                                alignItems: 'center',
-                                                                gap: '4px'
-                                                            }}
-                                                        >
-                                                            <Settings size={14} /> Quản Lý Trừ Điểm (BTC)
-                                                        </button>
                                                     </div>
 
                                                     <div className="standings-table-wrapper" style={{ overflowX: 'auto', background: '#161928', borderRadius: '16px', border: '1px solid var(--glass-border)' }}>
-                                                        <table className="standings-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.82rem', minWidth: '500px' }}>
+                                                        <table className="standings-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.82rem', minWidth: '460px' }}>
                                                             <thead>
                                                                 <tr style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--text-dim)', textTransform: 'uppercase', fontSize: '0.7rem', letterSpacing: '0.05em' }}>
                                                                     <th style={{ padding: '12px 14px' }}>Hạng</th>
@@ -532,7 +504,6 @@ export const Tournaments: React.FC = () => {
                                                                     <th style={{ padding: '12px 14px', textAlign: 'center' }}>Thắng</th>
                                                                     <th style={{ padding: '12px 14px', textAlign: 'center' }}>Hiệu Số</th>
                                                                     <th style={{ padding: '12px 14px', textAlign: 'center', color: '#eab308' }}>Nhất Tuần (+2đ)</th>
-                                                                    <th style={{ padding: '12px 14px', textAlign: 'center', color: '#ef4444' }}>Trừ Điểm</th>
                                                                     <th style={{ padding: '12px 16px', textAlign: 'right', color: 'gold' }}>Tổng Lũy Kế</th>
                                                                 </tr>
                                                             </thead>
@@ -559,9 +530,6 @@ export const Tournaments: React.FC = () => {
                                                                         <td style={{ padding: '12px 14px', textAlign: 'center', fontWeight: 800, color: '#eab308' }}>
                                                                             +{t.weeklyBonus}đ
                                                                         </td>
-                                                                        <td style={{ padding: '12px 14px', textAlign: 'center', fontWeight: 800, color: t.penalties > 0 ? '#ef4444' : 'var(--text-dim)' }}>
-                                                                            {t.penalties > 0 ? `-${t.penalties}đ` : '0'}
-                                                                        </td>
                                                                         <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 900, fontSize: '1.2rem', color: 'gold', fontFamily: 'var(--font-heading)' }}>
                                                                             {t.totalPoints}
                                                                         </td>
@@ -570,6 +538,7 @@ export const Tournaments: React.FC = () => {
                                                             </tbody>
                                                         </table>
                                                     </div>
+
                                                 </div>
                                             )}
 
@@ -1053,84 +1022,9 @@ export const Tournaments: React.FC = () => {
                 )}
             </AnimatePresence>
 
-            {/* Penalty Manager Dialog Modal */}
-            <AnimatePresence>
-                {showPenaltyModal && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        style={{
-                            position: 'fixed',
-                            inset: 0,
-                            zIndex: 3000,
-                            background: 'rgba(0,0,0,0.85)',
-                            backdropFilter: 'blur(10px)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            padding: '16px'
-                        }}
-                    >
-                        <motion.div
-                            initial={{ scale: 0.9, y: 15 }}
-                            animate={{ scale: 1, y: 0 }}
-                            exit={{ scale: 0.9, y: 15 }}
-                            className="glass-card"
-                            style={{
-                                width: '100%',
-                                maxWidth: '380px',
-                                padding: '24px',
-                                borderRadius: '20px',
-                                border: '1px solid rgba(239, 68, 68, 0.5)'
-                            }}
-                        >
-                            <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#ef4444', marginBottom: '14px', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-                                <ShieldAlert size={20} /> Quản Lý Trừ Điểm BTC
-                            </h3>
-                            <form onSubmit={handleSavePenalty} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                                <div>
-                                    <label style={{ fontSize: '0.8rem', color: 'var(--text-dim)', fontWeight: 600, marginBottom: '6px', display: 'block' }}>Chọn Đội Vi Phạm</label>
-                                    <select
-                                        value={penaltyTeamId}
-                                        onChange={e => setPenaltyTeamId(e.target.value)}
-                                        style={{ width: '100%', padding: '10px', borderRadius: '12px', background: '#161928', border: '1px solid var(--glass-border)', color: 'white', fontWeight: 700 }}
-                                    >
-                                        <option value="A">Đội A</option>
-                                        <option value="B">Đội B</option>
-                                        <option value="C">Đội C</option>
-                                        <option value="D">Đội D</option>
-                                    </select>
-                                </div>
-
-                                <div>
-                                    <label style={{ fontSize: '0.8rem', color: 'var(--text-dim)', fontWeight: 600, marginBottom: '6px', display: 'block' }}>Số Điểm Trừ (Số nguyên dương)</label>
-                                    <input
-                                        type="number"
-                                        min="0"
-                                        value={penaltyValue}
-                                        onChange={e => setPenaltyValue(Number(e.target.value))}
-                                        placeholder="VD: 1"
-                                        required
-                                        style={{ width: '100%', borderRadius: '12px', padding: '10px', fontSize: '1rem', fontWeight: 800 }}
-                                    />
-                                    <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', marginTop: '4px' }}>
-                                        Theo thể lệ: Trừ 1 điểm nếu đội không đủ 4 thành viên mà không báo trước BTC.
-                                    </div>
-                                </div>
-
-                                <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
-                                    <button type="button" onClick={() => setShowPenaltyModal(false)} style={{ flex: 1, padding: '10px', background: 'rgba(255,255,255,0.05)', border: 'none', color: 'white', borderRadius: '12px', fontWeight: 700, cursor: 'pointer' }}>Hủy</button>
-                                    <button type="submit" className="neon-btn" style={{ flex: 1, padding: '10px', borderRadius: '12px', background: 'linear-gradient(135deg, #ef4444, #dc2626)' }}>Lưu Trừ Điểm</button>
-                                </div>
-                            </form>
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
             {/* Score Entry Dialog */}
             <AnimatePresence>
+
                 {activeFixture && (
                     <motion.div
                         initial={{ opacity: 0 }}
