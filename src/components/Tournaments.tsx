@@ -379,6 +379,7 @@ export const Tournaments: React.FC = () => {
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         onClick={() => setSelectedTournament(null)}
+                        className="tournament-modal-overlay"
                         style={{
                             position: 'fixed',
                             inset: 0,
@@ -397,7 +398,7 @@ export const Tournaments: React.FC = () => {
                             animate={{ scale: 1, y: 0 }}
                             exit={{ scale: 0.95, y: 15 }}
                             onClick={(e) => e.stopPropagation()}
-                            className="glass-card"
+                            className="glass-card tournament-modal-card"
                             style={{
                                 width: '100%',
                                 maxWidth: '860px',
@@ -409,8 +410,6 @@ export const Tournaments: React.FC = () => {
                                 cursor: 'default'
                             }}
                         >
-
-
                             <button
                                 onClick={() => setSelectedTournament(null)}
                                 style={{
@@ -444,7 +443,7 @@ export const Tournaments: React.FC = () => {
                             {/* TEAM MINIGAME SPECIAL SUB-TABS */}
                             {selectedTournament.format === 'team_minigame' ? (
                                 <div>
-                                    <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', marginBottom: '20px', borderBottom: '1px solid var(--glass-border)', paddingBottom: '10px' }}>
+                                    <div className="team-subtabs no-scrollbar" style={{ display: 'flex', gap: '6px', overflowX: 'auto', marginBottom: '20px', borderBottom: '1px solid var(--glass-border)', paddingBottom: '10px' }}>
                                         {[
                                             { id: 'standings', label: '🏆 BXH Đồng Đội', icon: Award },
                                             { id: 'rosters', label: '👥 Danh Sách 4 Đội', icon: Users },
@@ -455,6 +454,7 @@ export const Tournaments: React.FC = () => {
                                             <button
                                                 key={tab.id}
                                                 onClick={() => setTeamTab(tab.id as any)}
+                                                className="team-subtab-btn"
                                                 style={{
                                                     padding: '8px 14px',
                                                     borderRadius: '12px',
@@ -485,7 +485,7 @@ export const Tournaments: React.FC = () => {
                                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                                                     {/* Top Leader Highlight Banner */}
                                                     {teamStandings.length > 0 && (
-                                                        <div style={{ background: 'linear-gradient(135deg, rgba(234, 179, 8, 0.15), rgba(249, 115, 22, 0.05))', padding: '16px 20px', borderRadius: '16px', border: '1px solid rgba(234, 179, 8, 0.3)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                        <div className="top-leader-banner" style={{ background: 'linear-gradient(135deg, rgba(234, 179, 8, 0.15), rgba(249, 115, 22, 0.05))', padding: '16px 20px', borderRadius: '16px', border: '1px solid rgba(234, 179, 8, 0.3)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                                                 <Trophy size={32} color="#eab308" fill="#eab308" />
                                                                 <div>
@@ -493,7 +493,7 @@ export const Tournaments: React.FC = () => {
                                                                     <div style={{ fontSize: '1.4rem', fontWeight: 900, color: 'white' }}>{teamStandings[0].teamName}</div>
                                                                 </div>
                                                             </div>
-                                                            <div style={{ textAlign: 'right' }}>
+                                                            <div className="leader-score" style={{ textAlign: 'right' }}>
                                                                 <div style={{ fontSize: '1.8rem', fontWeight: 900, color: '#eab308', fontFamily: 'var(--font-heading)' }}>{teamStandings[0].totalPoints} <span style={{ fontSize: '0.9rem' }}>ĐIỂM</span></div>
                                                                 <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>{teamStandings[0].wins} trận thắng (+{teamStandings[0].weeklyBonus}đ Nhất tuần)</div>
                                                             </div>
@@ -522,8 +522,8 @@ export const Tournaments: React.FC = () => {
                                                         </button>
                                                     </div>
 
-                                                    <div style={{ overflowX: 'auto', background: '#161928', borderRadius: '16px', border: '1px solid var(--glass-border)' }}>
-                                                        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.82rem' }}>
+                                                    <div className="standings-table-wrapper" style={{ overflowX: 'auto', background: '#161928', borderRadius: '16px', border: '1px solid var(--glass-border)' }}>
+                                                        <table className="standings-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.82rem', minWidth: '500px' }}>
                                                             <thead>
                                                                 <tr style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--text-dim)', textTransform: 'uppercase', fontSize: '0.7rem', letterSpacing: '0.05em' }}>
                                                                     <th style={{ padding: '12px 14px' }}>Hạng</th>
@@ -577,7 +577,7 @@ export const Tournaments: React.FC = () => {
                                             {teamTab === 'rosters' && (
                                                 <div>
                                                     <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'white', marginBottom: '14px' }}>Danh Sách 4 Đội Tham Dự Giải Pickleball</h3>
-                                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '14px' }}>
+                                                    <div className="team-roster-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '14px' }}>
                                                         {Object.values(DEFAULT_TEAM_ROSTERS).map(roster => {
                                                             const tStat = teamStandings.find(s => s.teamId === roster.id);
                                                             return (
@@ -631,7 +631,7 @@ export const Tournaments: React.FC = () => {
                                             {teamTab === 'schedule' && (
                                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                                                     {/* Week Switcher Buttons */}
-                                                    <div style={{ display: 'flex', gap: '8px' }}>
+                                                    <div className="weekly-switcher" style={{ display: 'flex', gap: '8px' }}>
                                                         {[
                                                             { week: 1, label: 'Tuần 1 (12/08)', matchDesc: 'Đội A vs Đội B | Đội C vs Đội D' },
                                                             { week: 2, label: 'Tuần 2 (19/08)', matchDesc: 'Đội A vs Đội C | Đội B vs Đội D' },
@@ -658,6 +658,7 @@ export const Tournaments: React.FC = () => {
                                                             </button>
                                                         ))}
                                                     </div>
+
 
                                                     {/* Week Matches List */}
                                                     <div>
@@ -1198,6 +1199,28 @@ export const Tournaments: React.FC = () => {
                     </motion.div>
                 )}
             </AnimatePresence>
+            <style>{`
+
+                .no-scrollbar::-webkit-scrollbar { display: none; }
+                .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+                @media (max-width: 768px) {
+                    .tournament-container { padding-left: 4px !important; padding-right: 4px !important; }
+                    .tournament-modal-overlay { padding: 6px !important; }
+                    .tournament-modal-card { padding: 12px 10px !important; maxHeight: calc(100vh - 12px) !important; borderRadius: 18px !important; }
+                    .top-leader-banner { flex-direction: column !important; align-items: flex-start !important; gap: 8px !important; padding: 12px 14px !important; }
+                    .leader-score { text-align: left !important; }
+                    .team-roster-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 8px !important; }
+                    .weekly-switcher { flex-direction: column !important; }
+                    .team-subtab-btn { padding: 6px 10px !important; font-size: 0.72rem !important; }
+                    .standings-table th, .standings-table td { padding: 8px 5px !important; font-size: 0.72rem !important; }
+                }
+
+                @media (max-width: 480px) {
+                    .team-roster-grid { grid-template-columns: 1fr !important; }
+                }
+            `}</style>
         </div>
     );
 };
+
