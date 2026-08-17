@@ -577,18 +577,6 @@ export const Tournaments: React.FC = () => {
                                                                             </div>
                                                                         ))}
                                                                     </div>
-                                                                    <div style={{
-                                                                        background: 'rgba(255,255,255,0.03)',
-                                                                        padding: '8px 12px',
-                                                                        borderTop: '1px solid rgba(255,255,255,0.05)',
-                                                                        display: 'flex',
-                                                                        justifyContent: 'space-between',
-                                                                        fontSize: '0.75rem',
-                                                                        color: 'var(--text-dim)'
-                                                                    }}>
-                                                                        <span>Tổng điểm team:</span>
-                                                                        <span style={{ fontWeight: 800, color: 'white' }}>10</span>
-                                                                    </div>
                                                                 </div>
                                                             );
                                                         })}
