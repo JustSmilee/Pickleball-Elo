@@ -627,7 +627,7 @@ export const Tournaments: React.FC = () => {
                                     paddingBottom: '12px',
                                     marginBottom: '20px',
                                 }}>
-                                    <div className="no-scrollbar" style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '2px' }}>
+                                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                                         {[
                                             { id: 'standings', label: 'BXH Đồng Đội', emoji: '🏆', icon: Award },
                                             { id: 'rosters', label: 'Danh Sách Đội', emoji: '👥', icon: Users },
@@ -642,17 +642,17 @@ export const Tournaments: React.FC = () => {
                                                     whileTap={{ scale: 0.95 }}
                                                     onClick={() => setTeamTab(tab.id as any)}
                                                     style={{
-                                                        padding: '9px 16px',
+                                                        padding: '8px 13px',
                                                         borderRadius: '12px',
                                                         border: isActive ? 'none' : '1px solid rgba(255,255,255,0.08)',
                                                         background: isActive ? 'linear-gradient(135deg, #eab308, #f97316)' : 'rgba(255,255,255,0.04)',
                                                         color: isActive ? '#000' : 'var(--text-dim)',
                                                         fontWeight: 800,
-                                                        fontSize: '0.78rem',
+                                                        fontSize: '0.76rem',
                                                         cursor: 'pointer',
                                                         display: 'flex',
                                                         alignItems: 'center',
-                                                        gap: '6px',
+                                                        gap: '5px',
                                                         whiteSpace: 'nowrap',
                                                         transition: 'all 0.18s ease',
                                                         boxShadow: isActive ? '0 4px 12px rgba(234,179,8,0.3)' : 'none',
