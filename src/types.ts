@@ -25,7 +25,53 @@ export interface Match {
   tournament_id?: string;
 }
 
-export type TournamentFormat = 'elo_only' | 'round_robin' | 'knockout';
+export type TournamentFormat = 'elo_only' | 'round_robin' | 'knockout' | 'team_minigame';
+
+export interface TeamRoster {
+  id: string; // 'A', 'B', 'C', 'D'
+  name: string; // 'Đội A', 'Đội B', 'Đội C', 'Đội D'
+  color: string;
+  badgeBg: string;
+  memberIds: string[];
+}
+
+export interface TeamMinigameStats {
+  teamId: string;
+  teamName: string;
+  color: string;
+  memberIds: string[];
+  members: Player[];
+  played: number;
+  wins: number;
+  losses: number;
+  ptsFor: number;
+  ptsAgainst: number;
+  scoreDiff: number;
+  matchPoints: number; // +1 per win
+  weeklyBonus: number; // +2 per week won
+  penalties: number; // deduction points
+  totalPoints: number; // matchPoints + weeklyBonus - penalties
+  weeklyWins: Record<number, number>; // week number (1,2,3) -> count of wins against matchup opponent
+}
+
+export interface WeeklyMatchupSummary {
+  week: number;
+  dateStr: string;
+  pair1: {
+    team1Id: string;
+    team2Id: string;
+    team1Wins: number;
+    team2Wins: number;
+    winnerId?: string;
+  };
+  pair2: {
+    team1Id: string;
+    team2Id: string;
+    team1Wins: number;
+    team2Wins: number;
+    winnerId?: string;
+  };
+}
 
 export interface TournamentFixture {
   id: string;
@@ -75,4 +121,5 @@ export interface TournamentPlayerStats {
   losses: number;
   current_streak: number;
 }
+
 

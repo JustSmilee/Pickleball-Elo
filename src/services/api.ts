@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import type { Player, Match, TournamentPlayerStats, TournamentFormat, TournamentFixture, TournamentStandingsRow } from '../types';
+import type { Player, Match, TournamentPlayerStats, TournamentFormat, TournamentFixture, TournamentStandingsRow, TeamRoster, TeamMinigameStats } from '../types';
 import { calculateEloDelta } from '../utils/elo';
 
 
@@ -279,13 +279,76 @@ export const matchService = {
     }
 };
 
+export const DEFAULT_TEAM_ROSTERS: Record<string, TeamRoster> = {
+    A: {
+        id: 'A',
+        name: 'Đội A',
+        color: '#00f2ff',
+        badgeBg: 'rgba(0, 242, 255, 0.15)',
+        memberIds: [
+            'd99e3277-15f3-47de-a1e4-d810e8c49a68', // Bùi Tăng Bảo Ngọc
+            '2d47f397-572a-402d-964c-0508328d01b5', // Tăng Khánh Thiện
+            'ff060842-674f-42b0-9e62-f6ad584c54f5', // Nguyễn Bích Ngọc
+            '51e0076f-5756-4165-b389-980cf0584b34', // Nguyễn Thị Phương Thảo
+            '48b2732b-68cc-4ffb-9253-2b3c37201656', // Bảo Khang
+        ]
+    },
+    B: {
+        id: 'B',
+        name: 'Đội B',
+        color: '#10b981',
+        badgeBg: 'rgba(16, 185, 129, 0.15)',
+        memberIds: [
+            '7945bd7a-3809-4e59-9301-dbc639eb6a4d', // Nguyễn Hồng Phong
+            'c84da8d0-57f8-443c-ad23-280b9f6af558', // Dương Viết Đức
+            'd36871b0-43f8-40e5-a197-ad51de3f5610', // Hà Vũ Đức Anh
+            'ff46b5dd-a478-4ddc-ac4a-9d42b2759f59', // Phạm Thị Quỳnh
+            '06a9e1fd-cfbe-4883-a46b-9162e89ff175', // Nguyễn Công Hoàn
+            'bb414b84-77a4-4162-952e-c1f28997c5a2', // Hoan Nguyên
+        ]
+    },
+    C: {
+        id: 'C',
+        name: 'Đội C',
+        color: '#f97316',
+        badgeBg: 'rgba(249, 115, 22, 0.15)',
+        memberIds: [
+            '6c5ed1bd-140c-4bae-9d5f-575f6442209e', // Hà Quang Huy
+            '036f1898-c112-4ebf-a586-cbf68426bd3b', // Nguyễn Huy Hoàng
+            '1722524a-ae87-4997-af1c-63114efb5c29', // Nguyễn Lâm Trường
+            'edad5c77-a968-40e3-9ae5-1e48e72fead9', // Phan Hương Trà
+            'e1ee0755-3a04-48b7-99ab-66158cf5354d', // Hà Thị Hiên (Hiển)
+        ]
+    },
+    D: {
+        id: 'D',
+        name: 'Đội D',
+        color: '#a855f7',
+        badgeBg: 'rgba(168, 85, 247, 0.15)',
+        memberIds: [
+            '1723d502-b7f5-4af1-9dc3-5bba1339d139', // Nguyễn Mạnh Thắng (12)
+            'c3ccd79f-ad18-47b5-bdc2-b010a24981c4', // Doãn Hữu Thăng
+            '2ba7e8d6-fa44-4787-94e7-1ef870fe59cc', // Hoàng Trần Xuân Sơn
+            'afc3529a-6282-4384-8322-68be919fc349', // Lê Thị Thùy Linh
+            'd762878f-8bcd-45b4-941a-8b6ff9671fc9', // Nguyễn Hoàng Minh Hiển
+        ]
+    }
+};
+
 export const tournamentService = {
     async getAllTournaments(): Promise<any[]> {
         if (!supabase) return [];
         const { data, error } = await supabase.from('tournaments').select('*').order('created_at', { ascending: false });
         if (error) throw error;
-        return data || [];
+        return (data || []).map((t: any) => {
+            if (t.name && t.name.includes('H2 2026') && (!t.format || t.format === 'elo_only')) {
+                return { ...t, format: 'team_minigame' };
+            }
+            return t;
+        });
+
     },
+
 
     async createTournament(
         name: string,
@@ -614,6 +677,188 @@ export const tournamentService = {
         return Object.values(map)
             .filter(r => r.played > 0)
             .sort((a, b) => b.points - a.points || b.wins - a.wins || b.scoreDiff - a.scoreDiff);
+    },
+
+    async getTeamMinigameStandings(tournamentId: string): Promise<TeamMinigameStats[]> {
+        if (!supabase) return [];
+
+        const [matchesRes, playersRes] = await Promise.all([
+            supabase
+                .from('matches')
+                .select('*')
+                .eq('tournament_id', tournamentId)
+                .order('created_at', { ascending: true }),
+            playerService.getAllPlayers()
+        ]);
+
+        if (matchesRes.error) throw matchesRes.error;
+        const matches = matchesRes.data || [];
+        const allPlayers = playersRes || [];
+
+        const playerMap = new Map<string, Player>();
+        allPlayers.forEach(p => playerMap.set(p.id, p));
+
+        const playerToTeam = new Map<string, string>();
+        Object.values(DEFAULT_TEAM_ROSTERS).forEach(team => {
+            team.memberIds.forEach(mId => playerToTeam.set(mId, team.id));
+        });
+
+        const stats: Record<string, TeamMinigameStats> = {};
+        Object.values(DEFAULT_TEAM_ROSTERS).forEach(team => {
+            const members = team.memberIds.map(id => playerMap.get(id)).filter(Boolean) as Player[];
+            stats[team.id] = {
+                teamId: team.id,
+                teamName: team.name,
+                color: team.color,
+                memberIds: team.memberIds,
+                members,
+                played: 0,
+                wins: 0,
+                losses: 0,
+                ptsFor: 0,
+                ptsAgainst: 0,
+                scoreDiff: 0,
+                matchPoints: 0,
+                weeklyBonus: 0,
+                penalties: 0,
+                totalPoints: 0,
+                weeklyWins: { 1: 0, 2: 0, 3: 0 }
+            };
+        });
+
+        const rawPenalties = localStorage.getItem(`tournament_penalties_${tournamentId}`);
+        const penalties: Record<string, number> = rawPenalties ? JSON.parse(rawPenalties) : {};
+        Object.keys(penalties).forEach(tId => {
+            if (stats[tId]) stats[tId].penalties = penalties[tId] || 0;
+        });
+
+        // Weekly matchup tracking:
+        // Week 1 (12/08): A vs B, C vs D
+        // Week 2 (19/08): A vs C, B vs D
+        // Week 3 (26/08): A vs D, B vs C
+        const weeklyPairWins: Record<number, Record<string, { wins1: number, wins2: number, diff1: number, diff2: number }>> = {
+            1: { 'A-B': { wins1: 0, wins2: 0, diff1: 0, diff2: 0 }, 'C-D': { wins1: 0, wins2: 0, diff1: 0, diff2: 0 } },
+            2: { 'A-C': { wins1: 0, wins2: 0, diff1: 0, diff2: 0 }, 'B-D': { wins1: 0, wins2: 0, diff1: 0, diff2: 0 } },
+            3: { 'A-D': { wins1: 0, wins2: 0, diff1: 0, diff2: 0 }, 'B-C': { wins1: 0, wins2: 0, diff1: 0, diff2: 0 } }
+        };
+
+        matches.forEach((m: any) => {
+            const t1 = playerToTeam.get(m.team1_player1_id) || playerToTeam.get(m.team1_player2_id || '');
+
+            const t2 = playerToTeam.get(m.team2_player1_id) || playerToTeam.get(m.team2_player2_id || '');
+
+            if (!t1 || !t2 || t1 === t2) return;
+
+            const s1 = m.team1_score || 0;
+            const s2 = m.team2_score || 0;
+
+            if (stats[t1]) {
+                stats[t1].played += 1;
+                stats[t1].ptsFor += s1;
+                stats[t1].ptsAgainst += s2;
+                if (s1 > s2) {
+                    stats[t1].wins += 1;
+                    stats[t1].matchPoints += 1;
+                } else if (s2 > s1) {
+                    stats[t1].losses += 1;
+                }
+            }
+
+            if (stats[t2]) {
+                stats[t2].played += 1;
+                stats[t2].ptsFor += s2;
+                stats[t2].ptsAgainst += s1;
+                if (s2 > s1) {
+                    stats[t2].wins += 1;
+                    stats[t2].matchPoints += 1;
+                } else if (s1 > s2) {
+                    stats[t2].losses += 1;
+                }
+            }
+
+            // Week logic based on date or fallback
+            const matchDate = new Date(m.created_at);
+            let weekNum = 1;
+            const day = matchDate.getUTCDate();
+            const month = matchDate.getUTCMonth() + 1;
+            if (month === 8) {
+                if (day <= 15) weekNum = 1;
+                else if (day <= 22) weekNum = 2;
+                else weekNum = 3;
+            }
+
+            const p1Key = `${t1}-${t2}`;
+            const p2Key = `${t2}-${t1}`;
+
+            const updateWeeklyData = (key: string, isDirect: boolean) => {
+                const wData = weeklyPairWins[weekNum]?.[key];
+                if (wData) {
+                    if (isDirect) {
+                        if (s1 > s2) wData.wins1++;
+                        else if (s2 > s1) wData.wins2++;
+                        wData.diff1 += (s1 - s2);
+                        wData.diff2 += (s2 - s1);
+                    } else {
+                        if (s1 > s2) wData.wins2++;
+                        else if (s2 > s1) wData.wins1++;
+                        wData.diff1 += (s2 - s1);
+                        wData.diff2 += (s1 - s2);
+                    }
+                }
+            };
+
+            updateWeeklyData(p1Key, true);
+            updateWeeklyData(p2Key, false);
+        });
+
+        // Compute scoreDiff
+        Object.values(stats).forEach(st => {
+            st.scoreDiff = st.ptsFor - st.ptsAgainst;
+        });
+
+        // Calculate weekly bonus (+2 points for weekly matchup winner)
+        Object.entries(weeklyPairWins).forEach(([wStr, pairs]) => {
+            const wNum = Number(wStr);
+            Object.entries(pairs).forEach(([pairKey, data]) => {
+                const [team1Id, team2Id] = pairKey.split('-');
+                let winnerId: string | null = null;
+                if (data.wins1 > data.wins2) winnerId = team1Id;
+                else if (data.wins2 > data.wins1) winnerId = team2Id;
+                else if (data.wins1 > 0 && data.wins1 === data.wins2) {
+                    // Tiebreaker by score differential in matchup
+                    if (data.diff1 > data.diff2) winnerId = team1Id;
+                    else if (data.diff2 > data.diff1) winnerId = team2Id;
+                }
+
+                if (winnerId && stats[winnerId]) {
+                    stats[winnerId].weeklyBonus += 2;
+                    stats[winnerId].weeklyWins[wNum] = (stats[winnerId].weeklyWins[wNum] || 0) + 1;
+                }
+            });
+        });
+
+        // Total points calculation
+        Object.values(stats).forEach(st => {
+            st.totalPoints = st.matchPoints + st.weeklyBonus - st.penalties;
+        });
+
+        return Object.values(stats).sort((a, b) =>
+            b.totalPoints - a.totalPoints ||
+            b.wins - a.wins ||
+            b.scoreDiff - a.scoreDiff
+        );
+    },
+
+    getTeamPenalties(tournamentId: string): Record<string, number> {
+        const raw = localStorage.getItem(`tournament_penalties_${tournamentId}`);
+        return raw ? JSON.parse(raw) : {};
+    },
+
+    setTeamPenalty(tournamentId: string, teamId: string, penalty: number): void {
+        const penalties = this.getTeamPenalties(tournamentId);
+        penalties[teamId] = Math.max(0, penalty);
+        localStorage.setItem(`tournament_penalties_${tournamentId}`, JSON.stringify(penalties));
     }
 };
+
 
