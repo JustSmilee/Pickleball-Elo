@@ -377,9 +377,10 @@ export const Tournaments: React.FC = () => {
                             backdropFilter: 'blur(12px)',
                             zIndex: 2000,
                             display: 'flex',
-                            alignItems: 'center',
+                            alignItems: 'flex-start',
                             justifyContent: 'center',
-                            padding: '16px',
+                            padding: '60px 16px 24px',
+                            overflowY: 'auto',
                             cursor: 'pointer'
                         }}
                     >
@@ -392,7 +393,7 @@ export const Tournaments: React.FC = () => {
                             style={{
                                 width: '100%',
                                 maxWidth: '860px',
-                                maxHeight: 'calc(100vh - 32px)',
+                                maxHeight: 'calc(100vh - 85px)',
                                 overflowY: 'auto',
                                 padding: '20px',
                                 borderRadius: '24px',
@@ -400,35 +401,58 @@ export const Tournaments: React.FC = () => {
                                 cursor: 'default'
                             }}
                         >
-                            <button
-                                onClick={() => setSelectedTournament(null)}
-                                style={{
-                                    position: 'absolute',
-                                    top: '16px',
-                                    right: '16px',
-                                    background: 'rgba(255,255,255,0.05)',
-                                    border: 'none',
-                                    color: 'white',
-                                    padding: '6px',
-                                    borderRadius: '50%',
-                                    cursor: 'pointer'
-                                }}
-                            >
-                                <X size={18} />
-                            </button>
-
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '20px' }}>
-                                <div style={{ padding: '12px', background: 'rgba(255, 215, 0, 0.1)', borderRadius: '16px' }}>
-                                    <Trophy color="gold" size={28} />
-                                </div>
-                                <div>
-                                    <h2 className="heading-font" style={{ fontSize: '1.6rem', color: 'gold', marginBottom: '2px' }}>{selectedTournament.name}</h2>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        {getFormatBadge(selectedTournament.format)}
-                                        <span style={{ color: 'var(--text-dim)', fontSize: '0.8rem' }}>Từ: {new Date(selectedTournament.start_date).toLocaleDateString('vi-VN')}</span>
+                            {/* Sticky Top Header Bar */}
+                            <div style={{
+                                position: 'sticky',
+                                top: '-20px',
+                                zIndex: 50,
+                                background: '#16192e',
+                                backdropFilter: 'blur(16px)',
+                                padding: '12px 16px',
+                                marginTop: '-8px',
+                                marginLeft: '-8px',
+                                marginRight: '-8px',
+                                marginBottom: '16px',
+                                borderRadius: '16px',
+                                border: '1px solid rgba(255, 255, 255, 0.08)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                boxShadow: '0 4px 20px rgba(0,0,0,0.4)'
+                            }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                    <div style={{ padding: '8px', background: 'rgba(255, 215, 0, 0.12)', borderRadius: '12px' }}>
+                                        <Trophy color="gold" size={24} />
+                                    </div>
+                                    <div>
+                                        <h2 className="heading-font" style={{ fontSize: '1.3rem', color: 'gold', margin: 0 }}>{selectedTournament.name}</h2>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
+                                            {getFormatBadge(selectedTournament.format)}
+                                            <span style={{ color: 'var(--text-dim)', fontSize: '0.75rem' }}>Từ: {new Date(selectedTournament.start_date).toLocaleDateString('vi-VN')}</span>
+                                        </div>
                                     </div>
                                 </div>
+                                <button
+                                    onClick={() => setSelectedTournament(null)}
+                                    title="Đóng"
+                                    style={{
+                                        background: 'rgba(255,255,255,0.12)',
+                                        border: '1px solid rgba(255,255,255,0.15)',
+                                        color: 'white',
+                                        width: '34px',
+                                        height: '34px',
+                                        borderRadius: '50%',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        flexShrink: 0
+                                    }}
+                                >
+                                    <X size={18} />
+                                </button>
                             </div>
+
 
                             {/* TEAM MINIGAME SPECIAL SUB-TABS */}
                             {selectedTournament.format === 'team_minigame' ? (
@@ -1088,8 +1112,8 @@ export const Tournaments: React.FC = () => {
 
                 @media (max-width: 768px) {
                     .tournament-container { padding-left: 4px !important; padding-right: 4px !important; }
-                    .tournament-modal-overlay { padding: 6px !important; }
-                    .tournament-modal-card { padding: 12px 10px !important; maxHeight: calc(100vh - 12px) !important; borderRadius: 18px !important; }
+                    .tournament-modal-overlay { padding: 45px 6px 12px !important; }
+                    .tournament-modal-card { padding: 12px 10px !important; maxHeight: calc(100vh - 60px) !important; borderRadius: 18px !important; }
                     .top-leader-banner { flex-direction: column !important; align-items: flex-start !important; gap: 8px !important; padding: 12px 14px !important; }
                     .leader-score { text-align: left !important; }
                     .team-roster-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 8px !important; }
@@ -1097,6 +1121,7 @@ export const Tournaments: React.FC = () => {
                     .team-subtab-btn { padding: 6px 10px !important; font-size: 0.72rem !important; }
                     .standings-table th, .standings-table td { padding: 8px 5px !important; font-size: 0.72rem !important; }
                 }
+
 
                 @media (max-width: 480px) {
                     .team-roster-grid { grid-template-columns: 1fr !important; }
