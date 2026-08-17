@@ -373,14 +373,13 @@ export const Tournaments: React.FC = () => {
                         style={{
                             position: 'fixed',
                             inset: 0,
-                            background: 'rgba(10, 12, 20, 0.94)',
-                            backdropFilter: 'blur(12px)',
-                            zIndex: 2000,
+                            background: 'rgba(10, 12, 20, 0.95)',
+                            backdropFilter: 'blur(16px)',
+                            zIndex: 5000,
                             display: 'flex',
-                            alignItems: 'flex-start',
+                            alignItems: 'center',
                             justifyContent: 'center',
-                            padding: '60px 16px 24px',
-                            overflowY: 'auto',
+                            padding: '16px',
                             cursor: 'pointer'
                         }}
                     >
@@ -393,7 +392,7 @@ export const Tournaments: React.FC = () => {
                             style={{
                                 width: '100%',
                                 maxWidth: '860px',
-                                maxHeight: 'calc(100vh - 85px)',
+                                maxHeight: 'calc(100vh - 32px)',
                                 overflowY: 'auto',
                                 padding: '20px',
                                 borderRadius: '24px',
@@ -401,6 +400,7 @@ export const Tournaments: React.FC = () => {
                                 cursor: 'default'
                             }}
                         >
+
                             {/* Sticky Top Header Bar */}
                             <div style={{
                                 position: 'sticky',
@@ -1112,8 +1112,8 @@ export const Tournaments: React.FC = () => {
 
                 @media (max-width: 768px) {
                     .tournament-container { padding-left: 4px !important; padding-right: 4px !important; }
-                    .tournament-modal-overlay { padding: 45px 6px 12px !important; }
-                    .tournament-modal-card { padding: 12px 10px !important; maxHeight: calc(100vh - 60px) !important; borderRadius: 18px !important; }
+                    .tournament-modal-overlay { padding: 8px !important; }
+                    .tournament-modal-card { padding: 12px 10px !important; maxHeight: calc(100vh - 16px) !important; borderRadius: 18px !important; }
                     .top-leader-banner { flex-direction: column !important; align-items: flex-start !important; gap: 8px !important; padding: 12px 14px !important; }
                     .leader-score { text-align: left !important; }
                     .team-roster-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 8px !important; }
@@ -1121,6 +1121,7 @@ export const Tournaments: React.FC = () => {
                     .team-subtab-btn { padding: 6px 10px !important; font-size: 0.72rem !important; }
                     .standings-table th, .standings-table td { padding: 8px 5px !important; font-size: 0.72rem !important; }
                 }
+
 
 
                 @media (max-width: 480px) {

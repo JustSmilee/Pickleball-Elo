@@ -109,7 +109,9 @@ function App() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
+            style={{ position: 'relative', zIndex: activeTab === 'tournaments' ? 3000 : 1 }}
           >
+
             {activeTab === 'dashboard' && (
               <div style={{ display: 'grid', gap: '24px' }}>
                 <header style={{ textAlign: 'center', padding: '10px 0' }}>
