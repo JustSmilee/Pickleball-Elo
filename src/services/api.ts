@@ -303,8 +303,7 @@ export const DEFAULT_TEAM_ROSTERS: Record<string, TeamRoster> = {
             'c84da8d0-57f8-443c-ad23-280b9f6af558', // Dương Viết Đức
             'd36871b0-43f8-40e5-a197-ad51de3f5610', // Hà Vũ Đức Anh
             'ff46b5dd-a478-4ddc-ac4a-9d42b2759f59', // Phạm Thị Quỳnh
-            '06a9e1fd-cfbe-4883-a46b-9162e89ff175', // Nguyễn Công Hoàn
-            'bb414b84-77a4-4162-952e-c1f28997c5a2', // Hoan Nguyên
+            'bb414b84-77a4-4162-952e-c1f28997c5a2', // Hoan Nguyen (Nguyễn Công Hoàn)
         ]
     },
     C: {

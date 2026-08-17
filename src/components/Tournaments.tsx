@@ -245,14 +245,27 @@ export const Tournaments: React.FC = () => {
     );
 
     // ─── PLAYER LEADERBOARD LIST ─────────────────────────────────────────────────
-    const PlayerLeaderboardList = ({ players: playerList }: { players: TournamentPlayerStats[] }) => (
+    // Build a quick lookup: playerId → team roster info
+    const playerTeamMap = React.useMemo(() => {
+        const map: Record<string, { teamId: string; teamName: string; color: string; badgeBg: string }> = {};
+        Object.values(DEFAULT_TEAM_ROSTERS).forEach(roster => {
+            roster.memberIds.forEach(pid => {
+                map[pid] = { teamId: roster.id, teamName: roster.name, color: roster.color, badgeBg: roster.badgeBg };
+            });
+        });
+        return map;
+    }, []);
+
+    const PlayerLeaderboardList = ({ players: playerList, showTeamColors = false }: { players: TournamentPlayerStats[]; showTeamColors?: boolean }) => (
         playerList.length === 0 ? (
             <div style={{ padding: '32px 20px', textAlign: 'center', color: 'var(--text-dim)', background: 'rgba(255,255,255,0.02)', borderRadius: '16px', fontSize: '0.85rem', border: '1px dashed rgba(255,255,255,0.08)' }}>
                 📭 Chưa có trận đấu nào được ghi nhận cho giải này.
             </div>
         ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {playerList.map((player, idx) => (
+                {playerList.map((player, idx) => {
+                    const teamInfo = showTeamColors ? playerTeamMap[player.playerId] : undefined;
+                    return (
                     <motion.div
                         key={player.playerId}
                         initial={{ opacity: 0, y: 8 }}
@@ -263,7 +276,9 @@ export const Tournaments: React.FC = () => {
                             background: idx === 0
                                 ? 'linear-gradient(135deg, rgba(255,215,0,0.08), rgba(255,215,0,0.02))'
                                 : idx < 3 ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.02)',
-                            border: idx === 0 ? '1px solid rgba(255,215,0,0.3)' : '1px solid var(--glass-border)',
+                            border: teamInfo
+                                ? `1px solid ${teamInfo.color}40`
+                                : (idx === 0 ? '1px solid rgba(255,215,0,0.3)' : '1px solid var(--glass-border)'),
                             borderRadius: '14px',
                             display: 'flex',
                             alignItems: 'center',
@@ -275,9 +290,26 @@ export const Tournaments: React.FC = () => {
                                 {getRankIcon(idx)}
                             </div>
                             <div>
-                                <div style={{ fontWeight: 800, color: 'white', fontSize: '0.9rem' }}>
-                                    {player.name}
-                                    {player.user_ad && <span style={{ fontSize: '0.7rem', color: 'var(--primary-neon)', marginLeft: '6px' }}>@{player.user_ad}</span>}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                    <span style={{ fontWeight: 800, color: 'white', fontSize: '0.9rem' }}>{player.name}</span>
+                                    {player.user_ad && <span style={{ fontSize: '0.7rem', color: 'var(--primary-neon)' }}>@{player.user_ad}</span>}
+                                    {teamInfo && (
+                                        <span style={{
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            padding: '1px 8px',
+                                            borderRadius: '8px',
+                                            fontSize: '0.65rem',
+                                            fontWeight: 900,
+                                            background: teamInfo.badgeBg,
+                                            color: teamInfo.color,
+                                            border: `1px solid ${teamInfo.color}50`,
+                                            letterSpacing: '0.06em',
+                                            textTransform: 'uppercase',
+                                        }}>
+                                            {teamInfo.teamName}
+                                        </span>
+                                    )}
                                 </div>
                                 <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', marginTop: '1px' }}>
                                     {player.matches_played} trận · {player.wins} thắng · {player.losses} thua
@@ -285,13 +317,14 @@ export const Tournaments: React.FC = () => {
                             </div>
                         </div>
                         <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                            <div style={{ fontWeight: 900, color: 'var(--primary-neon)', fontSize: '1.05rem', fontFamily: 'var(--font-heading)' }}>
+                            <div style={{ fontWeight: 900, color: teamInfo ? teamInfo.color : 'var(--primary-neon)', fontSize: '1.05rem', fontFamily: 'var(--font-heading)' }}>
                                 {player.elo_rating}
                             </div>
                             <div style={{ fontSize: '0.6rem', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>ELO</div>
                         </div>
                     </motion.div>
-                ))}
+                    );
+                })}
             </div>
         )
     );
@@ -586,8 +619,8 @@ export const Tournaments: React.FC = () => {
                                             { id: 'standings', label: 'BXH Đồng Đội', emoji: '🏆', icon: Award },
                                             { id: 'rosters', label: 'Danh Sách Đội', emoji: '👥', icon: Users },
                                             { id: 'schedule', label: 'Lịch & Kết Quả', emoji: '📅', icon: Calendar },
-                                            { id: 'rules', label: 'Thể Lệ', emoji: '📜', icon: BookOpen },
                                             { id: 'individual', label: 'Elo Cá Nhân', emoji: '⭐', icon: Trophy },
+                                            { id: 'rules', label: 'Thể Lệ', emoji: '📜', icon: BookOpen },
                                         ].map(tab => {
                                             const isActive = teamTab === tab.id;
                                             return (
@@ -877,7 +910,7 @@ export const Tournaments: React.FC = () => {
                                                     <h3 style={{ fontSize: '0.95rem', fontWeight: 800, marginBottom: '14px', color: 'white' }}>
                                                         🏆 Bảng Xếp Hạng Elo Cá Nhân ({tLeaderboard.length} VĐV)
                                                     </h3>
-                                                    <PlayerLeaderboardList players={tLeaderboard} />
+                                                    <PlayerLeaderboardList players={tLeaderboard} showTeamColors={true} />
                                                 </div>
                                             )}
                                         </motion.div>
