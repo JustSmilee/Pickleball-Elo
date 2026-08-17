@@ -379,13 +379,14 @@ export const Tournaments: React.FC = () => {
                         style={{
                             position: 'fixed',
                             inset: 0,
-                            background: 'rgba(10, 12, 20, 0.88)',
+                            background: 'rgba(10, 12, 20, 0.94)',
                             backdropFilter: 'blur(12px)',
-                            zIndex: 1000,
+                            zIndex: 2000,
                             display: 'flex',
-                            alignItems: 'center',
+                            alignItems: 'flex-start',
                             justifyContent: 'center',
-                            padding: '16px',
+                            padding: '76px 16px 24px',
+                            overflowY: 'auto',
                             cursor: 'pointer'
                         }}
                     >
@@ -398,7 +399,7 @@ export const Tournaments: React.FC = () => {
                             style={{
                                 width: '100%',
                                 maxWidth: '860px',
-                                maxHeight: '90vh',
+                                maxHeight: 'calc(100vh - 110px)',
                                 overflowY: 'auto',
                                 padding: '24px',
                                 borderRadius: '24px',
@@ -406,6 +407,7 @@ export const Tournaments: React.FC = () => {
                                 cursor: 'default'
                             }}
                         >
+
                             <button
                                 onClick={() => setSelectedTournament(null)}
                                 style={{
