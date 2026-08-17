@@ -341,14 +341,11 @@ export const tournamentService = {
         const { data, error } = await supabase.from('tournaments').select('*').order('created_at', { ascending: false });
         if (error) throw error;
         return (data || []).map((t: any) => {
-            if (t.name && t.name.includes('H2 2026') && (!t.format || t.format === 'elo_only')) {
-                return { ...t, format: 'team_minigame' };
-            }
-            return t;
+            const storedFormat = localStorage.getItem(`tournament_format_${t.id}`);
+            const format = (t.name && t.name.includes('H2 2026')) ? 'team_minigame' : (storedFormat || t.format || 'elo_only');
+            return { ...t, format };
         });
-
     },
-
 
     async createTournament(
         name: string,
@@ -362,7 +359,6 @@ export const tournamentService = {
             .from('tournaments')
             .insert([{
                 name,
-                format,
                 status: 'active',
                 start_date: new Date().toISOString()
             }])
@@ -371,14 +367,19 @@ export const tournamentService = {
 
         if (error) throw error;
 
+        if (tourney) {
+            localStorage.setItem(`tournament_format_${tourney.id}`, format);
+        }
+
         // If fixtures were generated, store them in localStorage / database metadata
         if (customFixtures && customFixtures.length > 0) {
             const localStorageKey = `tournament_fixtures_${tourney.id}`;
             localStorage.setItem(localStorageKey, JSON.stringify(customFixtures));
         }
 
-        return tourney;
+        return { ...tourney, format };
     },
+
 
     async getTournamentLeaderboard(tournamentId: string): Promise<TournamentPlayerStats[]> {
         if (!supabase) return [];

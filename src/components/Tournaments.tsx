@@ -51,18 +51,20 @@ export const Tournaments: React.FC = () => {
     };
 
     const handleSelectTournament = async (t: Tournament) => {
-        setSelectedTournament(t);
-        if (t.format === 'team_minigame') {
+        const format = (t.name && t.name.includes('H2 2026')) ? 'team_minigame' : (t.format || 'elo_only');
+        const activeT = { ...t, format: format as TournamentFormat };
+        setSelectedTournament(activeT);
+        if (format === 'team_minigame') {
             setTeamTab('standings');
         } else {
-            setActiveTab(t.format && t.format !== 'elo_only' ? 'bracket' : 'leaderboard');
+            setActiveTab(format !== 'elo_only' ? 'bracket' : 'leaderboard');
         }
         setLoadingDetail(true);
         try {
             const [board, matches, teamBoard] = await Promise.all([
                 tournamentService.getTournamentLeaderboard(t.id),
                 tournamentService.getTournamentMatches(t.id),
-                t.format === 'team_minigame' ? tournamentService.getTeamMinigameStandings(t.id) : Promise.resolve([])
+                format === 'team_minigame' ? tournamentService.getTeamMinigameStandings(t.id) : Promise.resolve([])
             ]);
             setTLeaderboard(board);
             setTMatches(matches);
@@ -71,7 +73,7 @@ export const Tournaments: React.FC = () => {
             const loadedFixtures = tournamentService.getTournamentFixtures(t.id);
             setFixtures(loadedFixtures);
 
-            if (t.format === 'round_robin') {
+            if (format === 'round_robin') {
                 const standings = tournamentService.calculateRoundRobinStandings(loadedFixtures, players);
                 setRrStandings(standings);
             }
@@ -81,6 +83,7 @@ export const Tournaments: React.FC = () => {
             setLoadingDetail(false);
         }
     };
+
 
     const handleTogglePlayerEnrollment = (id: string) => {
         setEnrolledPlayerIds(prev => 
