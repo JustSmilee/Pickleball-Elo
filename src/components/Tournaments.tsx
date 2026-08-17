@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { tournamentService, playerService, DEFAULT_TEAM_ROSTERS } from '../services/api';
+
 import type { Tournament, TournamentPlayerStats, TournamentFormat, TournamentFixture, TournamentStandingsRow, Player, TeamMinigameStats } from '../types';
 import { Trophy, Plus, Calendar, CheckCircle2, Circle, X, Medal, ArrowRight, GitBranch, Repeat, Check, Users, BookOpen, ShieldAlert, Award } from 'lucide-react';
 
@@ -362,8 +364,8 @@ export const Tournaments: React.FC = () => {
             </div>
 
             {/* Tournament Detail Modal */}
-            <AnimatePresence>
-                {selectedTournament && (
+            {selectedTournament && createPortal(
+                <AnimatePresence>
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
@@ -375,7 +377,7 @@ export const Tournaments: React.FC = () => {
                             inset: 0,
                             background: 'rgba(10, 12, 20, 0.95)',
                             backdropFilter: 'blur(16px)',
-                            zIndex: 5000,
+                            zIndex: 9999,
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
@@ -383,6 +385,7 @@ export const Tournaments: React.FC = () => {
                             cursor: 'pointer'
                         }}
                     >
+
                         <motion.div
                             initial={{ scale: 0.95, y: 15 }}
                             animate={{ scale: 1, y: 0 }}
@@ -1031,13 +1034,13 @@ export const Tournaments: React.FC = () => {
                             )}
                         </motion.div>
                     </motion.div>
-                )}
-            </AnimatePresence>
+                </AnimatePresence>,
+                document.body
+            )}
 
             {/* Score Entry Dialog */}
-            <AnimatePresence>
-
-                {activeFixture && (
+            {activeFixture && createPortal(
+                <AnimatePresence>
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
@@ -1045,7 +1048,7 @@ export const Tournaments: React.FC = () => {
                         style={{
                             position: 'fixed',
                             inset: 0,
-                            zIndex: 3000,
+                            zIndex: 10000,
                             background: 'rgba(0,0,0,0.85)',
                             backdropFilter: 'blur(10px)',
                             display: 'flex',
@@ -1103,8 +1106,10 @@ export const Tournaments: React.FC = () => {
                             </form>
                         </motion.div>
                     </motion.div>
-                )}
-            </AnimatePresence>
+                </AnimatePresence>,
+                document.body
+            )}
+
             <style>{`
 
                 .no-scrollbar::-webkit-scrollbar { display: none; }
