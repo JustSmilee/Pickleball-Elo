@@ -193,6 +193,17 @@ export const Tournaments: React.FC = () => {
         roundsMap[f.round].push(f);
     });
 
+    const playerToTeamMap = new Map<string, string>();
+    Object.values(DEFAULT_TEAM_ROSTERS).forEach(team => {
+        team.memberIds.forEach(mId => playerToTeamMap.set(mId, team.id));
+    });
+
+    const getTeamForPlayer = (playerId?: string) => {
+        if (!playerId) return null;
+        const teamId = playerToTeamMap.get(playerId);
+        return teamId ? DEFAULT_TEAM_ROSTERS[teamId] : null;
+    };
+
     // Helper for team badge color styling
     const getTeamBadge = (teamId: string) => {
         const roster = DEFAULT_TEAM_ROSTERS[teamId];
@@ -785,32 +796,120 @@ export const Tournaments: React.FC = () => {
                                                             </div>
                                                         ) : (
                                                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '10px' }}>
-                                                                {getMatchesForWeek(selectedWeek).map((m, idx) => (
-                                                                    <motion.div
-                                                                        key={m.id || idx}
-                                                                        initial={{ opacity: 0, y: 6 }}
-                                                                        animate={{ opacity: 1, y: 0 }}
-                                                                        transition={{ delay: idx * 0.03 }}
-                                                                        style={{ padding: '12px 14px', borderRadius: '14px', background: '#171a2b', border: '1px solid var(--glass-border)', display: 'flex', flexDirection: 'column', gap: '6px' }}
-                                                                    >
-                                                                        <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)', display: 'flex', justifyContent: 'space-between' }}>
-                                                                            <span>Trận #{idx + 1}</span>
-                                                                            <span>{new Date(m.created_at).toLocaleDateString('vi-VN')}</span>
-                                                                        </div>
-                                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem' }}>
-                                                                            <span style={{ fontWeight: m.team1_score > m.team2_score ? 900 : 500, color: m.team1_score > m.team2_score ? 'var(--primary-neon)' : 'white' }}>
-                                                                                {m.p1?.name} & {m.p1b?.name || ''}
-                                                                            </span>
-                                                                            <span style={{ fontWeight: 900, color: 'gold', fontSize: '1rem' }}>{m.team1_score}</span>
-                                                                        </div>
-                                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem' }}>
-                                                                            <span style={{ fontWeight: m.team2_score > m.team1_score ? 900 : 500, color: m.team2_score > m.team1_score ? 'var(--primary-neon)' : 'white' }}>
-                                                                                {m.p2?.name} & {m.p2b?.name || ''}
-                                                                            </span>
-                                                                            <span style={{ fontWeight: 900, color: 'gold', fontSize: '1rem' }}>{m.team2_score}</span>
-                                                                        </div>
-                                                                    </motion.div>
-                                                                ))}
+                                                                {getMatchesForWeek(selectedWeek).map((m, idx) => {
+                                                                    const team1 = getTeamForPlayer(m.team1_player1_id) || getTeamForPlayer(m.team1_player2_id);
+                                                                    const team2 = getTeamForPlayer(m.team2_player1_id) || getTeamForPlayer(m.team2_player2_id);
+
+                                                                    return (
+                                                                        <motion.div
+                                                                            key={m.id || idx}
+                                                                            initial={{ opacity: 0, y: 6 }}
+                                                                            animate={{ opacity: 1, y: 0 }}
+                                                                            transition={{ delay: idx * 0.03 }}
+                                                                            style={{
+                                                                                padding: '14px 16px',
+                                                                                borderRadius: '16px',
+                                                                                background: '#171a2b',
+                                                                                border: '1px solid var(--glass-border)',
+                                                                                display: 'flex',
+                                                                                flexDirection: 'column',
+                                                                                gap: '10px'
+                                                                            }}
+                                                                        >
+                                                                            {/* Match Header: Number, Date, and Team Matchup */}
+                                                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.7rem', color: 'var(--text-dim)', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '6px' }}>
+                                                                                <span style={{ fontWeight: 700 }}>Trận #{idx + 1} · {new Date(m.created_at).toLocaleDateString('vi-VN')}</span>
+                                                                                {team1 && team2 && (
+                                                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                                                                        <span style={{ padding: '1px 6px', borderRadius: '5px', fontSize: '0.68rem', fontWeight: 800, background: team1.badgeBg, color: team1.color, border: `1px solid ${team1.color}40` }}>
+                                                                                            {team1.name}
+                                                                                        </span>
+                                                                                        <span style={{ fontSize: '0.62rem', color: 'var(--text-dim)', fontWeight: 800 }}>VS</span>
+                                                                                        <span style={{ padding: '1px 6px', borderRadius: '5px', fontSize: '0.68rem', fontWeight: 800, background: team2.badgeBg, color: team2.color, border: `1px solid ${team2.color}40` }}>
+                                                                                            {team2.name}
+                                                                                        </span>
+                                                                                    </div>
+                                                                                )}
+                                                                            </div>
+
+                                                                            {/* Team 1 Side */}
+                                                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem' }}>
+                                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
+                                                                                    {team1 && (
+                                                                                        <span style={{
+                                                                                            fontSize: '0.68rem',
+                                                                                            fontWeight: 900,
+                                                                                            color: team1.color,
+                                                                                            background: team1.badgeBg,
+                                                                                            padding: '1px 6px',
+                                                                                            borderRadius: '5px',
+                                                                                            border: `1px solid ${team1.color}35`,
+                                                                                            flexShrink: 0
+                                                                                        }}>
+                                                                                            {team1.id}
+                                                                                        </span>
+                                                                                    )}
+                                                                                    <span style={{
+                                                                                        fontWeight: m.team1_score > m.team2_score ? 900 : 500,
+                                                                                        color: m.team1_score > m.team2_score ? 'var(--primary-neon)' : 'white',
+                                                                                        overflow: 'hidden',
+                                                                                        textOverflow: 'ellipsis',
+                                                                                        whiteSpace: 'nowrap'
+                                                                                    }}>
+                                                                                        {m.p1?.name}{m.p1b?.name ? ` & ${m.p1b.name}` : ''}
+                                                                                    </span>
+                                                                                </div>
+                                                                                <span style={{
+                                                                                    fontWeight: 900,
+                                                                                    color: m.team1_score > m.team2_score ? 'var(--primary-neon)' : 'gold',
+                                                                                    fontSize: '1.1rem',
+                                                                                    marginLeft: '10px',
+                                                                                    fontFamily: 'var(--font-heading)'
+                                                                                }}>
+                                                                                    {m.team1_score}
+                                                                                </span>
+                                                                            </div>
+
+                                                                            {/* Team 2 Side */}
+                                                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem' }}>
+                                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
+                                                                                    {team2 && (
+                                                                                        <span style={{
+                                                                                            fontSize: '0.68rem',
+                                                                                            fontWeight: 900,
+                                                                                            color: team2.color,
+                                                                                            background: team2.badgeBg,
+                                                                                            padding: '1px 6px',
+                                                                                            borderRadius: '5px',
+                                                                                            border: `1px solid ${team2.color}35`,
+                                                                                            flexShrink: 0
+                                                                                        }}>
+                                                                                            {team2.id}
+                                                                                        </span>
+                                                                                    )}
+                                                                                    <span style={{
+                                                                                        fontWeight: m.team2_score > m.team1_score ? 900 : 500,
+                                                                                        color: m.team2_score > m.team1_score ? 'var(--secondary-neon)' : 'white',
+                                                                                        overflow: 'hidden',
+                                                                                        textOverflow: 'ellipsis',
+                                                                                        whiteSpace: 'nowrap'
+                                                                                    }}>
+                                                                                        {m.p2?.name}{m.p2b?.name ? ` & ${m.p2b.name}` : ''}
+                                                                                    </span>
+                                                                                </div>
+                                                                                <span style={{
+                                                                                    fontWeight: 900,
+                                                                                    color: m.team2_score > m.team1_score ? 'var(--secondary-neon)' : 'gold',
+                                                                                    fontSize: '1.1rem',
+                                                                                    marginLeft: '10px',
+                                                                                    fontFamily: 'var(--font-heading)'
+                                                                                }}>
+                                                                                    {m.team2_score}
+                                                                                </span>
+                                                                            </div>
+                                                                        </motion.div>
+                                                                    );
+                                                                })}
                                                             </div>
                                                         )}
                                                     </div>

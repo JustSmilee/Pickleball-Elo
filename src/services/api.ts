@@ -726,14 +726,11 @@ export const tournamentService = {
             };
         });
 
-        // Weekly matchup tracking:
-        // Week 1 (12/08): A vs B, C vs D
-        // Week 2 (19/08): A vs C, B vs D
-        // Week 3 (26/08): A vs D, B vs C
-        const weeklyPairWins: Record<number, Record<string, { wins1: number, wins2: number, diff1: number, diff2: number }>> = {
-            1: { 'A-B': { wins1: 0, wins2: 0, diff1: 0, diff2: 0 }, 'C-D': { wins1: 0, wins2: 0, diff1: 0, diff2: 0 } },
-            2: { 'A-C': { wins1: 0, wins2: 0, diff1: 0, diff2: 0 }, 'B-D': { wins1: 0, wins2: 0, diff1: 0, diff2: 0 } },
-            3: { 'A-D': { wins1: 0, wins2: 0, diff1: 0, diff2: 0 }, 'B-C': { wins1: 0, wins2: 0, diff1: 0, diff2: 0 } }
+        // Weekly team stats tracking (to find the single best team per week):
+        const weeklyTeamStats: Record<number, Record<string, { wins: number, losses: number, ptsFor: number, ptsAgainst: number, scoreDiff: number, played: number }>> = {
+            1: { A: { wins: 0, losses: 0, ptsFor: 0, ptsAgainst: 0, scoreDiff: 0, played: 0 }, B: { wins: 0, losses: 0, ptsFor: 0, ptsAgainst: 0, scoreDiff: 0, played: 0 }, C: { wins: 0, losses: 0, ptsFor: 0, ptsAgainst: 0, scoreDiff: 0, played: 0 }, D: { wins: 0, losses: 0, ptsFor: 0, ptsAgainst: 0, scoreDiff: 0, played: 0 } },
+            2: { A: { wins: 0, losses: 0, ptsFor: 0, ptsAgainst: 0, scoreDiff: 0, played: 0 }, B: { wins: 0, losses: 0, ptsFor: 0, ptsAgainst: 0, scoreDiff: 0, played: 0 }, C: { wins: 0, losses: 0, ptsFor: 0, ptsAgainst: 0, scoreDiff: 0, played: 0 }, D: { wins: 0, losses: 0, ptsFor: 0, ptsAgainst: 0, scoreDiff: 0, played: 0 } },
+            3: { A: { wins: 0, losses: 0, ptsFor: 0, ptsAgainst: 0, scoreDiff: 0, played: 0 }, B: { wins: 0, losses: 0, ptsFor: 0, ptsAgainst: 0, scoreDiff: 0, played: 0 }, C: { wins: 0, losses: 0, ptsFor: 0, ptsAgainst: 0, scoreDiff: 0, played: 0 }, D: { wins: 0, losses: 0, ptsFor: 0, ptsAgainst: 0, scoreDiff: 0, played: 0 } }
         };
 
         matches.forEach((m: any) => {
@@ -780,28 +777,26 @@ export const tournamentService = {
                 else weekNum = 3;
             }
 
-            const p1Key = `${t1}-${t2}`;
-            const p2Key = `${t2}-${t1}`;
-
-            const updateWeeklyData = (key: string, isDirect: boolean) => {
-                const wData = weeklyPairWins[weekNum]?.[key];
-                if (wData) {
-                    if (isDirect) {
-                        if (s1 > s2) wData.wins1++;
-                        else if (s2 > s1) wData.wins2++;
-                        wData.diff1 += (s1 - s2);
-                        wData.diff2 += (s2 - s1);
-                    } else {
-                        if (s1 > s2) wData.wins2++;
-                        else if (s2 > s1) wData.wins1++;
-                        wData.diff1 += (s2 - s1);
-                        wData.diff2 += (s1 - s2);
-                    }
+            if (weeklyTeamStats[weekNum]) {
+                if (weeklyTeamStats[weekNum][t1]) {
+                    const wt1 = weeklyTeamStats[weekNum][t1];
+                    wt1.played += 1;
+                    wt1.ptsFor += s1;
+                    wt1.ptsAgainst += s2;
+                    if (s1 > s2) wt1.wins += 1;
+                    else if (s2 > s1) wt1.losses += 1;
+                    wt1.scoreDiff = wt1.ptsFor - wt1.ptsAgainst;
                 }
-            };
-
-            updateWeeklyData(p1Key, true);
-            updateWeeklyData(p2Key, false);
+                if (weeklyTeamStats[weekNum][t2]) {
+                    const wt2 = weeklyTeamStats[weekNum][t2];
+                    wt2.played += 1;
+                    wt2.ptsFor += s2;
+                    wt2.ptsAgainst += s1;
+                    if (s2 > s1) wt2.wins += 1;
+                    else if (s1 > s2) wt2.losses += 1;
+                    wt2.scoreDiff = wt2.ptsFor - wt2.ptsAgainst;
+                }
+            }
         });
 
         // Compute scoreDiff
@@ -809,25 +804,27 @@ export const tournamentService = {
             st.scoreDiff = st.ptsFor - st.ptsAgainst;
         });
 
-        // Calculate weekly bonus (+2 points for weekly matchup winner)
-        Object.entries(weeklyPairWins).forEach(([wStr, pairs]) => {
+        // Calculate weekly bonus (+2 points for the SINGLE best team of each week)
+        Object.entries(weeklyTeamStats).forEach(([wStr, teamDataMap]) => {
             const wNum = Number(wStr);
-            Object.entries(pairs).forEach(([pairKey, data]) => {
-                const [team1Id, team2Id] = pairKey.split('-');
-                let winnerId: string | null = null;
-                if (data.wins1 > data.wins2) winnerId = team1Id;
-                else if (data.wins2 > data.wins1) winnerId = team2Id;
-                else if (data.wins1 > 0 && data.wins1 === data.wins2) {
-                    // Tiebreaker by score differential in matchup
-                    if (data.diff1 > data.diff2) winnerId = team1Id;
-                    else if (data.diff2 > data.diff1) winnerId = team2Id;
-                }
+            const candidates = Object.entries(teamDataMap)
+                .map(([teamId, wStat]) => ({ teamId, ...wStat }))
+                .filter(t => t.played > 0);
 
-                if (winnerId && stats[winnerId]) {
-                    stats[winnerId].weeklyBonus += 2;
-                    stats[winnerId].weeklyWins[wNum] = (stats[winnerId].weeklyWins[wNum] || 0) + 1;
-                }
-            });
+            if (candidates.length === 0) return;
+
+            // Sort candidates to find the #1 best team in this week
+            candidates.sort((a, b) =>
+                b.wins - a.wins ||
+                b.scoreDiff - a.scoreDiff ||
+                b.ptsFor - a.ptsFor
+            );
+
+            const topTeam = candidates[0];
+            if (topTeam && topTeam.wins > 0 && stats[topTeam.teamId]) {
+                stats[topTeam.teamId].weeklyBonus += 2;
+                stats[topTeam.teamId].weeklyWins[wNum] = 1;
+            }
         });
 
         // Total points calculation

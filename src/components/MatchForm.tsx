@@ -1,9 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { playerService, matchService, tournamentService } from '../services/api';
+import { playerService, matchService, tournamentService, DEFAULT_TEAM_ROSTERS } from '../services/api';
 import { calculateEloDelta } from '../utils/elo';
 import type { Player } from '../types';
-import { Users, ArrowRight, X, Trophy, Search, ChevronDown } from 'lucide-react';
+import { Users, ArrowRight, X, Trophy, Search, ChevronDown, Shield } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+
+const playerToTeamMap = new Map<string, string>();
+Object.values(DEFAULT_TEAM_ROSTERS).forEach(team => {
+    team.memberIds.forEach(mId => playerToTeamMap.set(mId, team.id));
+});
 
 interface MatchFormProps {
     onSuccess: () => void;
@@ -80,6 +85,8 @@ const PlayerSelect: React.FC<{
     const [search, setSearch] = useState('');
 
     const selectedPlayer = availablePlayers.find(p => p.id === value);
+    const selTeamId = selectedPlayer ? playerToTeamMap.get(selectedPlayer.id) : null;
+    const selTeam = selTeamId ? DEFAULT_TEAM_ROSTERS[selTeamId] : null;
 
     const sortedPlayers = [...availablePlayers].sort((a, b) => compareVietnameseNames(a.name, b.name));
 
@@ -97,7 +104,7 @@ const PlayerSelect: React.FC<{
                     padding: '12px 16px',
                     borderRadius: '14px',
                     background: '#1e2337',
-                    border: `1.5px solid ${value ? accentColor : 'var(--glass-border)'}`,
+                    border: `1.5px solid ${value ? (selTeam ? selTeam.color : accentColor) : 'var(--glass-border)'}`,
                     color: 'white',
                     cursor: 'pointer',
                     display: 'flex',
@@ -105,7 +112,7 @@ const PlayerSelect: React.FC<{
                     alignItems: 'center',
                     fontWeight: 700,
                     transition: 'all 0.2s ease',
-                    boxShadow: value ? `0 0 10px ${accentColor}25` : 'none'
+                    boxShadow: value ? `0 0 10px ${selTeam ? selTeam.color : accentColor}25` : 'none'
                 }}
             >
                 {selectedPlayer ? (
@@ -113,6 +120,20 @@ const PlayerSelect: React.FC<{
                         <span style={{ fontWeight: 800, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', fontSize: '0.95rem' }}>
                             {selectedPlayer.name}
                         </span>
+                        {selTeam && (
+                            <span style={{
+                                fontSize: '0.68rem',
+                                color: selTeam.color,
+                                background: selTeam.badgeBg,
+                                border: `1px solid ${selTeam.color}40`,
+                                padding: '2px 6px',
+                                borderRadius: '6px',
+                                whiteSpace: 'nowrap',
+                                fontWeight: 800
+                            }}>
+                                {selTeam.name}
+                            </span>
+                        )}
                         {selectedPlayer.user_ad && (
                             <span style={{ fontSize: '0.7rem', color: accentColor, background: `${accentColor}18`, padding: '2px 6px', borderRadius: '6px', whiteSpace: 'nowrap', fontWeight: 700 }}>
                                 @{selectedPlayer.user_ad}
@@ -281,8 +302,27 @@ const PlayerSelect: React.FC<{
                                                     {p.name[0].toUpperCase()}
                                                 </div>
                                                 <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                                                         <span style={{ fontWeight: 800, fontSize: '0.95rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</span>
+                                                        {(() => {
+                                                            const pTId = playerToTeamMap.get(p.id);
+                                                            const pT = pTId ? DEFAULT_TEAM_ROSTERS[pTId] : null;
+                                                            if (!pT) return null;
+                                                            return (
+                                                                <span style={{
+                                                                    fontSize: '0.68rem',
+                                                                    color: pT.color,
+                                                                    background: pT.badgeBg,
+                                                                    border: `1px solid ${pT.color}40`,
+                                                                    padding: '1px 6px',
+                                                                    borderRadius: '6px',
+                                                                    fontWeight: 800,
+                                                                    whiteSpace: 'nowrap'
+                                                                }}>
+                                                                    {pT.name}
+                                                                </span>
+                                                            );
+                                                        })()}
                                                         {p.user_ad && (
                                                             <span style={{ fontSize: '0.7rem', color: accentColor, background: `${accentColor}18`, padding: '1px 5px', borderRadius: '5px', fontWeight: 700 }}>
                                                                 @{p.user_ad}
@@ -309,9 +349,41 @@ const PlayerSelect: React.FC<{
     );
 };
 
-    const getAvailablePlayers = (currentId: string) => {
+    const currentTournament = tournaments.find(t => t.id === tournamentId);
+    const isTeamMinigame = currentTournament?.format === 'team_minigame';
+
+    const side1TeamId = (p1 && playerToTeamMap.get(p1)) || (p1b && playerToTeamMap.get(p1b)) || '';
+    const side2TeamId = (p2 && playerToTeamMap.get(p2)) || (p2b && playerToTeamMap.get(p2b)) || '';
+    const side1Team = side1TeamId ? DEFAULT_TEAM_ROSTERS[side1TeamId] : null;
+    const side2Team = side2TeamId ? DEFAULT_TEAM_ROSTERS[side2TeamId] : null;
+
+    const getAvailablePlayers = (currentId: string, side: 1 | 2) => {
         const selectedIds = [p1, p1b, p2, p2b].filter(id => id && id !== currentId);
-        const available = players.filter(p => !selectedIds.includes(p.id));
+        let available = players.filter(p => !selectedIds.includes(p.id));
+
+        if (isTeamMinigame) {
+            // Must belong to one of the teams in DEFAULT_TEAM_ROSTERS
+            available = available.filter(p => playerToTeamMap.has(p.id));
+
+            if (side === 1) {
+                if (side1TeamId) {
+                    // Must belong to the same team already chosen on side 1
+                    available = available.filter(p => playerToTeamMap.get(p.id) === side1TeamId);
+                } else if (side2TeamId) {
+                    // Cannot belong to the team already chosen on side 2
+                    available = available.filter(p => playerToTeamMap.get(p.id) !== side2TeamId);
+                }
+            } else {
+                if (side2TeamId) {
+                    // Must belong to the same team already chosen on side 2
+                    available = available.filter(p => playerToTeamMap.get(p.id) === side2TeamId);
+                } else if (side1TeamId) {
+                    // Cannot belong to the team already chosen on side 1
+                    available = available.filter(p => playerToTeamMap.get(p.id) !== side1TeamId);
+                }
+            }
+        }
+
         const currentSelected = players.find(p => p.id === currentId);
         if (currentSelected && !available.some(p => p.id === currentSelected.id)) {
             available.push(currentSelected);
@@ -339,6 +411,29 @@ const PlayerSelect: React.FC<{
 
         if (activeIds.length < (matchType === 'singles' ? 2 : 4)) {
             return alert('Vui lòng chọn đầy đủ người chơi');
+        }
+
+        if (isTeamMinigame) {
+            const t1a = playerToTeamMap.get(p1);
+            const t1b = matchType === 'doubles' ? playerToTeamMap.get(p1b) : t1a;
+            const t2a = playerToTeamMap.get(p2);
+            const t2b = matchType === 'doubles' ? playerToTeamMap.get(p2b) : t2a;
+
+            if (!t1a || (matchType === 'doubles' && !t1b)) {
+                return alert('Vận động viên ở Bên 1 không thuộc danh sách đội của giải Minigame.');
+            }
+            if (!t2a || (matchType === 'doubles' && !t2b)) {
+                return alert('Vận động viên ở Bên 2 không thuộc danh sách đội của giải Minigame.');
+            }
+            if (matchType === 'doubles' && t1a !== t1b) {
+                return alert('Bên 1 phải bao gồm 2 VĐV thuộc cùng một đội!');
+            }
+            if (matchType === 'doubles' && t2a !== t2b) {
+                return alert('Bên 2 phải bao gồm 2 VĐV thuộc cùng một đội!');
+            }
+            if (t1a === t2a) {
+                return alert('Hai bên thi đấu phải thuộc 2 đội khác nhau!');
+            }
         }
 
         setSubmitting(true);
@@ -495,17 +590,57 @@ const PlayerSelect: React.FC<{
                                 <option key={t.id} value={t.id}>🏆 {t.name}</option>
                             ))}
                         </select>
+                        {isTeamMinigame && (
+                            <motion.div
+                                initial={{ opacity: 0, y: -4 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                style={{
+                                    marginTop: '10px',
+                                    padding: '8px 12px',
+                                    borderRadius: '12px',
+                                    background: 'rgba(0, 242, 255, 0.08)',
+                                    border: '1px solid rgba(0, 242, 255, 0.25)',
+                                    fontSize: '0.78rem',
+                                    color: 'var(--primary-neon)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                    lineHeight: 1.4
+                                }}
+                            >
+                                <Shield size={14} style={{ flexShrink: 0 }} />
+                                <span><strong>Giải Đồng đội Minigame:</strong> Mỗi bên chỉ chọn các VĐV trong cùng 1 đội (Đội A, B, C hoặc D).</span>
+                            </motion.div>
+                        )}
                     </div>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
                     {/* Team 1 */}
-                    <motion.div whileHover={{ y: -3 }} className="glass-card" style={{ padding: '20px', borderTop: '4px solid var(--primary-neon)', borderRadius: '20px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-                            <div style={{ padding: '8px', background: 'hsla(var(--primary-neon-h), 100%, 50%, 0.1)', borderRadius: '12px' }}>
-                                <Users color="var(--primary-neon)" size={20} />
+                    <motion.div
+                        whileHover={{ y: -3 }}
+                        className="glass-card"
+                        style={{
+                            padding: '20px',
+                            borderTop: `4px solid ${side1Team ? side1Team.color : 'var(--primary-neon)'}`,
+                            borderRadius: '20px',
+                            transition: 'border-color 0.3s ease'
+                        }}
+                    >
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <div style={{ padding: '8px', background: side1Team ? side1Team.badgeBg : 'hsla(var(--primary-neon-h), 100%, 50%, 0.1)', borderRadius: '12px' }}>
+                                    <Users color={side1Team ? side1Team.color : "var(--primary-neon)"} size={20} />
+                                </div>
+                                <h3 className="heading-font" style={{ fontSize: '1.2rem', color: side1Team ? side1Team.color : 'white' }}>
+                                    {side1Team ? side1Team.name : (isTeamMinigame ? 'Bên 1' : 'Team A')}
+                                </h3>
                             </div>
-                            <h3 className="heading-font" style={{ fontSize: '1.2rem' }}>Team A</h3>
+                            {side1Team && (
+                                <span style={{ fontSize: '0.75rem', fontWeight: 800, padding: '3px 10px', borderRadius: '8px', background: side1Team.badgeBg, color: side1Team.color, border: `1px solid ${side1Team.color}40` }}>
+                                    {side1Team.name}
+                                </span>
+                            )}
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                             <div>
@@ -513,9 +648,9 @@ const PlayerSelect: React.FC<{
                                 <PlayerSelect
                                     value={p1}
                                     onChange={setP1}
-                                    availablePlayers={getAvailablePlayers(p1)}
-                                    placeholder="Chọn người chơi..."
-                                    accentColor="var(--primary-neon)"
+                                    availablePlayers={getAvailablePlayers(p1, 1)}
+                                    placeholder={side1Team ? `Chọn VĐV ${side1Team.name}...` : "Chọn người chơi..."}
+                                    accentColor={side1Team ? side1Team.color : "var(--primary-neon)"}
                                 />
                             </div>
                             {matchType === 'doubles' && (
@@ -524,28 +659,46 @@ const PlayerSelect: React.FC<{
                                     <PlayerSelect
                                         value={p1b}
                                         onChange={setP1b}
-                                        availablePlayers={getAvailablePlayers(p1b)}
-                                        placeholder="Chọn người chơi thứ 2..."
-                                        accentColor="var(--primary-neon)"
+                                        availablePlayers={getAvailablePlayers(p1b, 1)}
+                                        placeholder={side1Team ? `Chọn VĐV thứ 2 của ${side1Team.name}...` : "Chọn người chơi thứ 2..."}
+                                        accentColor={side1Team ? side1Team.color : "var(--primary-neon)"}
                                     />
                                 </motion.div>
                             )}
                             <div style={{ marginTop: '6px' }}>
                                 <label style={{ fontSize: '0.8rem', color: 'var(--text-dim)', marginBottom: '6px', display: 'block', fontWeight: 600 }}>Số điểm</label>
                                 <input type="number" value={s1} onChange={e => setS1(e.target.value === '' ? '' : Number(e.target.value))} placeholder="0"
-                                    style={{ width: '100%', fontSize: '1.6rem', height: '56px', textAlign: 'center', fontWeight: 900, fontFamily: 'var(--font-heading)', border: '2px solid hsla(var(--primary-neon-h), 100%, 50%, 0.2)', borderRadius: '14px', padding: '0.4rem' }}
+                                    style={{ width: '100%', fontSize: '1.6rem', height: '56px', textAlign: 'center', fontWeight: 900, fontFamily: 'var(--font-heading)', border: `2px solid ${side1Team ? side1Team.color + '40' : 'hsla(var(--primary-neon-h), 100%, 50%, 0.2)'}`, borderRadius: '14px', padding: '0.4rem' }}
                                 />
                             </div>
                         </div>
                     </motion.div>
 
                     {/* Team 2 */}
-                    <motion.div whileHover={{ y: -3 }} className="glass-card" style={{ padding: '20px', borderTop: '4px solid var(--secondary-neon)', borderRadius: '20px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-                            <div style={{ padding: '8px', background: 'hsla(var(--secondary-neon-h), 100%, 50%, 0.1)', borderRadius: '12px' }}>
-                                <Users color="var(--secondary-neon)" size={20} />
+                    <motion.div
+                        whileHover={{ y: -3 }}
+                        className="glass-card"
+                        style={{
+                            padding: '20px',
+                            borderTop: `4px solid ${side2Team ? side2Team.color : 'var(--secondary-neon)'}`,
+                            borderRadius: '20px',
+                            transition: 'border-color 0.3s ease'
+                        }}
+                    >
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <div style={{ padding: '8px', background: side2Team ? side2Team.badgeBg : 'hsla(var(--secondary-neon-h), 100%, 50%, 0.1)', borderRadius: '12px' }}>
+                                    <Users color={side2Team ? side2Team.color : "var(--secondary-neon)"} size={20} />
+                                </div>
+                                <h3 className="heading-font" style={{ fontSize: '1.2rem', color: side2Team ? side2Team.color : 'white' }}>
+                                    {side2Team ? side2Team.name : (isTeamMinigame ? 'Bên 2' : 'Team B')}
+                                </h3>
                             </div>
-                            <h3 className="heading-font" style={{ fontSize: '1.2rem' }}>Team B</h3>
+                            {side2Team && (
+                                <span style={{ fontSize: '0.75rem', fontWeight: 800, padding: '3px 10px', borderRadius: '8px', background: side2Team.badgeBg, color: side2Team.color, border: `1px solid ${side2Team.color}40` }}>
+                                    {side2Team.name}
+                                </span>
+                            )}
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                             <div>
@@ -553,9 +706,9 @@ const PlayerSelect: React.FC<{
                                 <PlayerSelect
                                     value={p2}
                                     onChange={setP2}
-                                    availablePlayers={getAvailablePlayers(p2)}
-                                    placeholder="Chọn người chơi..."
-                                    accentColor="var(--secondary-neon)"
+                                    availablePlayers={getAvailablePlayers(p2, 2)}
+                                    placeholder={side2Team ? `Chọn VĐV ${side2Team.name}...` : "Chọn người chơi..."}
+                                    accentColor={side2Team ? side2Team.color : "var(--secondary-neon)"}
                                 />
                             </div>
                             {matchType === 'doubles' && (
@@ -564,16 +717,16 @@ const PlayerSelect: React.FC<{
                                     <PlayerSelect
                                         value={p2b}
                                         onChange={setP2b}
-                                        availablePlayers={getAvailablePlayers(p2b)}
-                                        placeholder="Chọn người chơi thứ 2..."
-                                        accentColor="var(--secondary-neon)"
+                                        availablePlayers={getAvailablePlayers(p2b, 2)}
+                                        placeholder={side2Team ? `Chọn VĐV thứ 2 của ${side2Team.name}...` : "Chọn người chơi thứ 2..."}
+                                        accentColor={side2Team ? side2Team.color : "var(--secondary-neon)"}
                                     />
                                 </motion.div>
                             )}
                             <div style={{ marginTop: '6px' }}>
                                 <label style={{ fontSize: '0.8rem', color: 'var(--text-dim)', marginBottom: '6px', display: 'block', fontWeight: 600 }}>Số điểm</label>
                                 <input type="number" value={s2} onChange={e => setS2(e.target.value === '' ? '' : Number(e.target.value))} placeholder="0"
-                                    style={{ width: '100%', fontSize: '1.6rem', height: '56px', textAlign: 'center', fontWeight: 900, fontFamily: 'var(--font-heading)', border: '2px solid hsla(var(--secondary-neon-h), 100%, 50%, 0.2)', borderRadius: '14px', padding: '0.4rem' }}
+                                    style={{ width: '100%', fontSize: '1.6rem', height: '56px', textAlign: 'center', fontWeight: 900, fontFamily: 'var(--font-heading)', border: `2px solid ${side2Team ? side2Team.color + '40' : 'hsla(var(--secondary-neon-h), 100%, 50%, 0.2)'}`, borderRadius: '14px', padding: '0.4rem' }}
                                 />
                             </div>
                         </div>

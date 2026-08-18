@@ -1,8 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { matchService, tournamentService } from '../services/api';
+import { matchService, tournamentService, DEFAULT_TEAM_ROSTERS } from '../services/api';
 import { Clock, TrendingUp, TrendingDown, Users, User, Trash2, Edit2, Trophy, Filter } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Tournament } from '../types';
+
+const playerToTeamMap = new Map<string, string>();
+Object.values(DEFAULT_TEAM_ROSTERS).forEach(team => {
+    team.memberIds.forEach(mId => playerToTeamMap.set(mId, team.id));
+});
+
+const getTeamForPlayer = (playerId?: string) => {
+    if (!playerId) return null;
+    const teamId = playerToTeamMap.get(playerId);
+    return teamId ? DEFAULT_TEAM_ROSTERS[teamId] : null;
+};
 
 interface HistoryProps {
     onEdit?: (match: any) => void;
@@ -179,82 +190,121 @@ export const History: React.FC<HistoryProps> = ({ onEdit }) => {
                                     </button>
                                 </div>
 
-                                <div style={{ marginBottom: '12px', fontSize: '0.7rem', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                        <Clock size={12} /> {formatRelativeTime(match.created_at)}
-                                    </span>
-                                    {match.tournament?.name && (
-                                        <span style={{
-                                            background: 'rgba(255, 215, 0, 0.1)',
-                                            color: 'gold',
-                                            border: '1px solid rgba(255, 215, 0, 0.3)',
-                                            padding: '2px 8px',
-                                            borderRadius: '8px',
-                                            fontSize: '0.65rem',
-                                            fontWeight: 800,
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: '4px'
-                                        }}>
-                                            <Trophy size={11} /> {match.tournament.name}
-                                        </span>
-                                    )}
-                                </div>
+                                {(() => {
+                                    const team1 = getTeamForPlayer(match.team1_player1_id) || getTeamForPlayer(match.team1_player2_id);
+                                    const team2 = getTeamForPlayer(match.team2_player1_id) || getTeamForPlayer(match.team2_player2_id);
 
-
-                                <div className="match-grid" style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: '16px' }}>
-                                    <div style={{ textAlign: 'right' }}>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                            <div className="player-name" style={{ fontWeight: 900, fontSize: '1.15rem', color: match.team1_score > match.team2_score ? 'var(--primary-neon)' : 'white', lineHeight: 1.1 }}>
-                                                {match.p1?.name}
+                                    return (
+                                        <>
+                                            <div style={{ marginBottom: '12px', fontSize: '0.7rem', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                    <Clock size={12} /> {formatRelativeTime(match.created_at)}
+                                                </span>
+                                                {match.tournament?.name && (
+                                                    <span style={{
+                                                        background: 'rgba(255, 215, 0, 0.1)',
+                                                        color: 'gold',
+                                                        border: '1px solid rgba(255, 215, 0, 0.3)',
+                                                        padding: '2px 8px',
+                                                        borderRadius: '8px',
+                                                        fontSize: '0.65rem',
+                                                        fontWeight: 800,
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: '4px'
+                                                    }}>
+                                                        <Trophy size={11} /> {match.tournament.name}
+                                                    </span>
+                                                )}
+                                                {team1 && team2 && (
+                                                    <span style={{
+                                                        background: 'rgba(255, 255, 255, 0.05)',
+                                                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                                                        padding: '2px 8px',
+                                                        borderRadius: '8px',
+                                                        fontSize: '0.68rem',
+                                                        fontWeight: 800,
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: '5px'
+                                                    }}>
+                                                        <span style={{ color: team1.color }}>{team1.name}</span>
+                                                        <span style={{ color: 'var(--text-dim)', fontSize: '0.6rem' }}>VS</span>
+                                                        <span style={{ color: team2.color }}>{team2.name}</span>
+                                                    </span>
+                                                )}
                                             </div>
-                                            {match.p1b && (
-                                                <>
-                                                    <div style={{ fontSize: '0.65rem', color: 'var(--text-dim)', fontWeight: 800, margin: '-2px 0' }}>&</div>
-                                                    <div className="player-name" style={{ fontWeight: 900, fontSize: '1.15rem', color: match.team1_score > match.team2_score ? 'var(--primary-neon)' : 'white', lineHeight: 1.1 }}>
-                                                        {match.p1b.name}
+
+                                            <div className="match-grid" style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: '16px' }}>
+                                                <div style={{ textAlign: 'right' }}>
+                                                    {team1 && (
+                                                        <div style={{ marginBottom: '4px' }}>
+                                                            <span style={{ fontSize: '0.68rem', fontWeight: 800, color: team1.color, background: team1.badgeBg, padding: '1px 6px', borderRadius: '5px', border: `1px solid ${team1.color}30` }}>
+                                                                {team1.name}
+                                                            </span>
+                                                        </div>
+                                                    )}
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                                        <div className="player-name" style={{ fontWeight: 900, fontSize: '1.15rem', color: match.team1_score > match.team2_score ? 'var(--primary-neon)' : 'white', lineHeight: 1.1 }}>
+                                                            {match.p1?.name}
+                                                        </div>
+                                                        {match.p1b && (
+                                                            <>
+                                                                <div style={{ fontSize: '0.65rem', color: 'var(--text-dim)', fontWeight: 800, margin: '-2px 0' }}>&</div>
+                                                                <div className="player-name" style={{ fontWeight: 900, fontSize: '1.15rem', color: match.team1_score > match.team2_score ? 'var(--primary-neon)' : 'white', lineHeight: 1.1 }}>
+                                                                    {match.p1b.name}
+                                                                </div>
+                                                            </>
+                                                        )}
                                                     </div>
-                                                </>
-                                            )}
-                                        </div>
-                                        <div style={{ marginTop: '6px', fontSize: '0.8rem', color: match.team1_score > match.team2_score ? 'var(--success)' : 'var(--text-dim)', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px' }}>
-                                            {match.team1_score > match.team2_score ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
-                                            <span style={{ fontWeight: 800 }}>{match.elo_delta_team1 > 0 ? `+${match.elo_delta_team1}` : match.elo_delta_team1}</span>
-                                        </div>
-                                    </div>
+                                                    <div style={{ marginTop: '6px', fontSize: '0.8rem', color: match.team1_score > match.team2_score ? 'var(--success)' : 'var(--text-dim)', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px' }}>
+                                                        {match.team1_score > match.team2_score ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
+                                                        <span style={{ fontWeight: 800 }}>{match.elo_delta_team1 > 0 ? `+${match.elo_delta_team1}` : match.elo_delta_team1}</span>
+                                                    </div>
+                                                </div>
 
-                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
-                                        <div className="score-box" style={{
-                                            padding: '8px 18px', borderRadius: '14px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--glass-border)',
-                                            fontFamily: 'var(--font-heading)', fontSize: '1.3rem', fontWeight: 900, letterSpacing: '0.05em', color: 'white'
-                                        }}>
-                                            {match.team1_score} - {match.team2_score}
-                                        </div>
-                                        <div style={{ fontSize: '0.65rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(255,255,255,0.05)', padding: '4px 10px', borderRadius: '10px' }}>
-                                            {match.type === 'doubles' ? <Users size={12} /> : <User size={12} />} {match.type === 'doubles' ? 'Đôi' : 'Đơn'}
-                                        </div>
-                                    </div>
+                                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
+                                                    <div className="score-box" style={{
+                                                        padding: '8px 18px', borderRadius: '14px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--glass-border)',
+                                                        fontFamily: 'var(--font-heading)', fontSize: '1.3rem', fontWeight: 900, letterSpacing: '0.05em', color: 'white'
+                                                    }}>
+                                                        {match.team1_score} - {match.team2_score}
+                                                    </div>
+                                                    <div style={{ fontSize: '0.65rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(255,255,255,0.05)', padding: '4px 10px', borderRadius: '10px' }}>
+                                                        {match.type === 'doubles' ? <Users size={12} /> : <User size={12} />} {match.type === 'doubles' ? 'Đôi' : 'Đơn'}
+                                                    </div>
+                                                </div>
 
-                                    <div style={{ textAlign: 'left' }}>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                            <div className="player-name" style={{ fontWeight: 900, fontSize: '1.5rem', color: match.team2_score > match.team1_score ? 'var(--secondary-neon)' : 'white', lineHeight: 1 }}>
-                                                {match.p2?.name}
+                                                <div style={{ textAlign: 'left' }}>
+                                                    {team2 && (
+                                                        <div style={{ marginBottom: '4px' }}>
+                                                            <span style={{ fontSize: '0.68rem', fontWeight: 800, color: team2.color, background: team2.badgeBg, padding: '1px 6px', borderRadius: '5px', border: `1px solid ${team2.color}30` }}>
+                                                                {team2.name}
+                                                            </span>
+                                                        </div>
+                                                    )}
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                        <div className="player-name" style={{ fontWeight: 900, fontSize: '1.5rem', color: match.team2_score > match.team1_score ? 'var(--secondary-neon)' : 'white', lineHeight: 1 }}>
+                                                            {match.p2?.name}
+                                                        </div>
+                                                        {match.p2b && (
+                                                            <>
+                                                                <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', fontWeight: 800, margin: '-2px 0' }}>&</div>
+                                                                <div className="player-name" style={{ fontWeight: 900, fontSize: '1.5rem', color: match.team2_score > match.team1_score ? 'var(--secondary-neon)' : 'white', lineHeight: 1 }}>
+                                                                    {match.p2b.name}
+                                                                </div>
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                    <div style={{ marginTop: '6px', fontSize: '0.8rem', color: match.team2_score > match.team1_score ? 'var(--success)' : 'var(--text-dim)', display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: '4px' }}>
+                                                        {match.team2_score > match.team1_score ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
+                                                        <span style={{ fontWeight: 800 }}>{match.elo_delta_team2 > 0 ? `+${match.elo_delta_team2}` : match.elo_delta_team2}</span>
+                                                    </div>
+                                                </div>
                                             </div>
-                                            {match.p2b && (
-                                                <>
-                                                    <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', fontWeight: 800, margin: '-2px 0' }}>&</div>
-                                                    <div className="player-name" style={{ fontWeight: 900, fontSize: '1.5rem', color: match.team2_score > match.team1_score ? 'var(--secondary-neon)' : 'white', lineHeight: 1 }}>
-                                                        {match.p2b.name}
-                                                    </div>
-                                                </>
-                                            )}
-                                        </div>
-                                        <div style={{ marginTop: '10px', fontSize: '0.85rem', color: match.team2_score > match.team1_score ? 'var(--success)' : 'var(--text-dim)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                            {match.team2_score > match.team1_score ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
-                                            <span style={{ fontWeight: 800 }}>{match.elo_delta_team2 > 0 ? `+${match.elo_delta_team2}` : match.elo_delta_team2}</span>
-                                        </div>
-                                    </div>
-                                </div>
+                                        </>
+                                    );
+                                })()}
                             </motion.div>
                         ))
                     )}
