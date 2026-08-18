@@ -150,163 +150,193 @@ export const History: React.FC<HistoryProps> = ({ onEdit }) => {
                 </div>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <AnimatePresence>
                     {filteredMatches.length === 0 ? (
-                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="glass-card" style={{ padding: '40px', textAlign: 'center' }}>
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="glass-card" style={{ padding: '30px', textAlign: 'center' }}>
                             <p style={{ color: 'var(--text-dim)' }}>Không tìm thấy trận đấu nào phù hợp.</p>
                         </motion.div>
                     ) : (
-                        filteredMatches.map((match, index) => (
-                            <motion.div
-                                key={match.id}
-                                initial={{ opacity: 0, scale: 0.95 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                exit={{ opacity: 0, x: -20 }}
-                                transition={{ delay: index * 0.05 }}
-                                className="glass-card hover-row history-item-card"
-                                style={{ padding: '16px 20px', position: 'relative', opacity: isDeleting === match.id ? 0.5 : 1, borderRadius: '16px' }}
-                            >
-                                {/* Actions (All matches) */}
-                                <div style={{ position: 'absolute', top: '12px', right: '12px', display: 'flex', gap: '8px' }}>
-                                    <button
-                                        onClick={() => onEdit?.(match)}
-                                        style={{
-                                            background: 'rgba(0, 242, 255, 0.05)', border: '1px solid hsla(183, 100%, 50%, 0.1)', color: 'var(--primary-neon)', cursor: 'pointer',
-                                            padding: '6px 10px', borderRadius: '10px', transition: 'all 0.2s ease', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', fontWeight: 700
-                                        }}
-                                    >
-                                        <Edit2 size={12} /> Sửa
-                                    </button>
-                                    <button
-                                        onClick={() => handleDelete(match.id)}
-                                        disabled={isDeleting !== null}
-                                        style={{
-                                            background: 'rgba(239, 68, 68, 0.05)', border: '1px solid rgba(239, 68, 68, 0.1)', color: 'var(--error)', cursor: 'pointer',
-                                            padding: '6px 10px', borderRadius: '10px', transition: 'all 0.2s ease', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', fontWeight: 700
-                                        }}
-                                    >
-                                        <Trash2 size={12} /> Xoá
-                                    </button>
-                                </div>
+                        filteredMatches.map((match, index) => {
+                            const team1 = getTeamForPlayer(match.team1_player1_id) || getTeamForPlayer(match.team1_player2_id);
+                            const team2 = getTeamForPlayer(match.team2_player1_id) || getTeamForPlayer(match.team2_player2_id);
+                            const t1Win = match.team1_score > match.team2_score;
+                            const t2Win = match.team2_score > match.team1_score;
 
-                                {(() => {
-                                    const team1 = getTeamForPlayer(match.team1_player1_id) || getTeamForPlayer(match.team1_player2_id);
-                                    const team2 = getTeamForPlayer(match.team2_player1_id) || getTeamForPlayer(match.team2_player2_id);
-
-                                    return (
-                                        <>
-                                            <div style={{ marginBottom: '12px', fontSize: '0.7rem', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                                                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                    <Clock size={12} /> {formatRelativeTime(match.created_at)}
+                            return (
+                                <motion.div
+                                    key={match.id}
+                                    initial={{ opacity: 0, y: 4 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, x: -20 }}
+                                    transition={{ delay: Math.min(index * 0.02, 0.3) }}
+                                    className="glass-card hover-row history-item-card"
+                                    style={{
+                                        padding: '10px 14px',
+                                        borderRadius: '12px',
+                                        position: 'relative',
+                                        opacity: isDeleting === match.id ? 0.5 : 1,
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        gap: '6px'
+                                    }}
+                                >
+                                    {/* Top Meta Row */}
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.68rem', color: 'var(--text-dim)', borderBottom: '1px solid rgba(255,255,255,0.04)', paddingBottom: '4px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                                            <span style={{ display: 'flex', alignItems: 'center', gap: '3px', fontWeight: 600 }}>
+                                                <Clock size={11} /> {formatRelativeTime(match.created_at)}
+                                            </span>
+                                            {match.tournament?.name && (
+                                                <span style={{
+                                                    background: 'rgba(255, 215, 0, 0.1)',
+                                                    color: 'gold',
+                                                    border: '1px solid rgba(255, 215, 0, 0.25)',
+                                                    padding: '1px 6px',
+                                                    borderRadius: '6px',
+                                                    fontSize: '0.62rem',
+                                                    fontWeight: 800,
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    gap: '3px'
+                                                }}>
+                                                    <Trophy size={10} /> {match.tournament.name}
                                                 </span>
-                                                {match.tournament?.name && (
-                                                    <span style={{
-                                                        background: 'rgba(255, 215, 0, 0.1)',
-                                                        color: 'gold',
-                                                        border: '1px solid rgba(255, 215, 0, 0.3)',
-                                                        padding: '2px 8px',
-                                                        borderRadius: '8px',
-                                                        fontSize: '0.65rem',
-                                                        fontWeight: 800,
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        gap: '4px'
-                                                    }}>
-                                                        <Trophy size={11} /> {match.tournament.name}
-                                                    </span>
-                                                )}
-                                                {team1 && team2 && (
-                                                    <span style={{
-                                                        background: 'rgba(255, 255, 255, 0.05)',
-                                                        border: '1px solid rgba(255, 255, 255, 0.1)',
-                                                        padding: '2px 8px',
-                                                        borderRadius: '8px',
-                                                        fontSize: '0.68rem',
-                                                        fontWeight: 800,
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        gap: '5px'
-                                                    }}>
-                                                        <span style={{ color: team1.color }}>{team1.name}</span>
-                                                        <span style={{ color: 'var(--text-dim)', fontSize: '0.6rem' }}>VS</span>
-                                                        <span style={{ color: team2.color }}>{team2.name}</span>
+                                            )}
+                                            {team1 && team2 && (
+                                                <span style={{
+                                                    background: 'rgba(255, 255, 255, 0.04)',
+                                                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                                                    padding: '1px 6px',
+                                                    borderRadius: '6px',
+                                                    fontSize: '0.62rem',
+                                                    fontWeight: 800,
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    gap: '4px'
+                                                }}>
+                                                    <span style={{ color: team1.color }}>{team1.name}</span>
+                                                    <span style={{ color: 'var(--text-dim)', fontSize: '0.55rem' }}>VS</span>
+                                                    <span style={{ color: team2.color }}>{team2.name}</span>
+                                                </span>
+                                            )}
+                                            <span style={{ fontSize: '0.6rem', color: 'var(--text-dim)', display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
+                                                {match.type === 'doubles' ? <Users size={10} /> : <User size={10} />}
+                                                {match.type === 'doubles' ? 'Đôi' : 'Đơn'}
+                                            </span>
+                                        </div>
+
+                                        {/* Action buttons */}
+                                        <div style={{ display: 'flex', gap: '4px' }}>
+                                            <button
+                                                onClick={() => onEdit?.(match)}
+                                                title="Sửa trận đấu"
+                                                style={{
+                                                    background: 'rgba(0, 242, 255, 0.08)', border: '1px solid rgba(0, 242, 255, 0.2)', color: 'var(--primary-neon)', cursor: 'pointer',
+                                                    padding: '2px 6px', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '2px', fontSize: '0.65rem', fontWeight: 700
+                                                }}
+                                            >
+                                                <Edit2 size={10} /> Sửa
+                                            </button>
+                                            <button
+                                                onClick={() => handleDelete(match.id)}
+                                                disabled={isDeleting !== null}
+                                                title="Xóa trận đấu"
+                                                style={{
+                                                    background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.2)', color: 'var(--error)', cursor: 'pointer',
+                                                    padding: '2px 6px', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '2px', fontSize: '0.65rem', fontWeight: 700
+                                                }}
+                                            >
+                                                <Trash2 size={10} /> Xoá
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* Match Body */}
+                                    <div className="match-grid" style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: '8px' }}>
+                                        {/* Side 1 */}
+                                        <div style={{ textAlign: 'right', minWidth: 0 }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px', minWidth: 0 }}>
+                                                <span
+                                                    className="player-name"
+                                                    style={{
+                                                        fontWeight: t1Win ? 800 : 500,
+                                                        fontSize: '0.88rem',
+                                                        color: t1Win ? 'var(--primary-neon)' : 'white',
+                                                        overflow: 'hidden',
+                                                        textOverflow: 'ellipsis',
+                                                        whiteSpace: 'nowrap',
+                                                    }}
+                                                    title={`${match.p1?.name || ''}${match.p1b?.name ? ` & ${match.p1b.name}` : ''}`}
+                                                >
+                                                    {match.p1?.name}{match.p1b?.name ? ` & ${match.p1b.name}` : ''}
+                                                </span>
+                                                {team1 && (
+                                                    <span style={{ fontSize: '0.58rem', fontWeight: 900, color: team1.color, background: team1.badgeBg, padding: '1px 4px', borderRadius: '4px', border: `1px solid ${team1.color}30`, flexShrink: 0 }}>
+                                                        {team1.id}
                                                     </span>
                                                 )}
                                             </div>
-
-                                            <div className="match-grid" style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: '16px' }}>
-                                                <div style={{ textAlign: 'right' }}>
-                                                    {team1 && (
-                                                        <div style={{ marginBottom: '4px' }}>
-                                                            <span style={{ fontSize: '0.68rem', fontWeight: 800, color: team1.color, background: team1.badgeBg, padding: '1px 6px', borderRadius: '5px', border: `1px solid ${team1.color}30` }}>
-                                                                {team1.name}
-                                                            </span>
-                                                        </div>
-                                                    )}
-                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                                        <div className="player-name" style={{ fontWeight: 900, fontSize: '1.15rem', color: match.team1_score > match.team2_score ? 'var(--primary-neon)' : 'white', lineHeight: 1.1 }}>
-                                                            {match.p1?.name}
-                                                        </div>
-                                                        {match.p1b && (
-                                                            <>
-                                                                <div style={{ fontSize: '0.65rem', color: 'var(--text-dim)', fontWeight: 800, margin: '-2px 0' }}>&</div>
-                                                                <div className="player-name" style={{ fontWeight: 900, fontSize: '1.15rem', color: match.team1_score > match.team2_score ? 'var(--primary-neon)' : 'white', lineHeight: 1.1 }}>
-                                                                    {match.p1b.name}
-                                                                </div>
-                                                            </>
-                                                        )}
-                                                    </div>
-                                                    <div style={{ marginTop: '6px', fontSize: '0.8rem', color: match.team1_score > match.team2_score ? 'var(--success)' : 'var(--text-dim)', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px' }}>
-                                                        {match.team1_score > match.team2_score ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
-                                                        <span style={{ fontWeight: 800 }}>{match.elo_delta_team1 > 0 ? `+${match.elo_delta_team1}` : match.elo_delta_team1}</span>
-                                                    </div>
-                                                </div>
-
-                                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
-                                                    <div className="score-box" style={{
-                                                        padding: '8px 18px', borderRadius: '14px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--glass-border)',
-                                                        fontFamily: 'var(--font-heading)', fontSize: '1.3rem', fontWeight: 900, letterSpacing: '0.05em', color: 'white'
-                                                    }}>
-                                                        {match.team1_score} - {match.team2_score}
-                                                    </div>
-                                                    <div style={{ fontSize: '0.65rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(255,255,255,0.05)', padding: '4px 10px', borderRadius: '10px' }}>
-                                                        {match.type === 'doubles' ? <Users size={12} /> : <User size={12} />} {match.type === 'doubles' ? 'Đôi' : 'Đơn'}
-                                                    </div>
-                                                </div>
-
-                                                <div style={{ textAlign: 'left' }}>
-                                                    {team2 && (
-                                                        <div style={{ marginBottom: '4px' }}>
-                                                            <span style={{ fontSize: '0.68rem', fontWeight: 800, color: team2.color, background: team2.badgeBg, padding: '1px 6px', borderRadius: '5px', border: `1px solid ${team2.color}30` }}>
-                                                                {team2.name}
-                                                            </span>
-                                                        </div>
-                                                    )}
-                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                                        <div className="player-name" style={{ fontWeight: 900, fontSize: '1.5rem', color: match.team2_score > match.team1_score ? 'var(--secondary-neon)' : 'white', lineHeight: 1 }}>
-                                                            {match.p2?.name}
-                                                        </div>
-                                                        {match.p2b && (
-                                                            <>
-                                                                <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', fontWeight: 800, margin: '-2px 0' }}>&</div>
-                                                                <div className="player-name" style={{ fontWeight: 900, fontSize: '1.5rem', color: match.team2_score > match.team1_score ? 'var(--secondary-neon)' : 'white', lineHeight: 1 }}>
-                                                                    {match.p2b.name}
-                                                                </div>
-                                                            </>
-                                                        )}
-                                                    </div>
-                                                    <div style={{ marginTop: '6px', fontSize: '0.8rem', color: match.team2_score > match.team1_score ? 'var(--success)' : 'var(--text-dim)', display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: '4px' }}>
-                                                        {match.team2_score > match.team1_score ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
-                                                        <span style={{ fontWeight: 800 }}>{match.elo_delta_team2 > 0 ? `+${match.elo_delta_team2}` : match.elo_delta_team2}</span>
-                                                    </div>
-                                                </div>
+                                            <div style={{ fontSize: '0.7rem', color: t1Win ? 'var(--success)' : 'var(--text-dim)', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '2px', marginTop: '1px' }}>
+                                                {t1Win ? <TrendingUp size={11} /> : <TrendingDown size={11} />}
+                                                <span style={{ fontWeight: 700, fontSize: '0.68rem' }}>{match.elo_delta_team1 > 0 ? `+${match.elo_delta_team1}` : match.elo_delta_team1}</span>
                                             </div>
-                                        </>
-                                    );
-                                })()}
-                            </motion.div>
-                        ))
+                                        </div>
+
+                                        {/* Score Box */}
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0, padding: '0 4px' }}>
+                                            <div className="score-box" style={{
+                                                padding: '4px 12px',
+                                                borderRadius: '10px',
+                                                background: 'rgba(255,255,255,0.04)',
+                                                border: '1px solid rgba(255,255,255,0.1)',
+                                                fontFamily: 'var(--font-heading)',
+                                                fontSize: '1.05rem',
+                                                fontWeight: 900,
+                                                letterSpacing: '0.05em',
+                                                color: 'white',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '6px'
+                                            }}>
+                                                <span style={{ color: t1Win ? 'var(--primary-neon)' : 'white' }}>{match.team1_score}</span>
+                                                <span style={{ color: 'var(--text-dim)', fontSize: '0.8rem' }}>-</span>
+                                                <span style={{ color: t2Win ? 'var(--secondary-neon)' : 'white' }}>{match.team2_score}</span>
+                                            </div>
+                                        </div>
+
+                                        {/* Side 2 */}
+                                        <div style={{ textAlign: 'left', minWidth: 0 }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: '4px', minWidth: 0 }}>
+                                                {team2 && (
+                                                    <span style={{ fontSize: '0.58rem', fontWeight: 900, color: team2.color, background: team2.badgeBg, padding: '1px 4px', borderRadius: '4px', border: `1px solid ${team2.color}30`, flexShrink: 0 }}>
+                                                        {team2.id}
+                                                    </span>
+                                                )}
+                                                <span
+                                                    className="player-name"
+                                                    style={{
+                                                        fontWeight: t2Win ? 800 : 500,
+                                                        fontSize: '0.88rem',
+                                                        color: t2Win ? 'var(--secondary-neon)' : 'white',
+                                                        overflow: 'hidden',
+                                                        textOverflow: 'ellipsis',
+                                                        whiteSpace: 'nowrap',
+                                                    }}
+                                                    title={`${match.p2?.name || ''}${match.p2b?.name ? ` & ${match.p2b.name}` : ''}`}
+                                                >
+                                                    {match.p2?.name}{match.p2b?.name ? ` & ${match.p2b.name}` : ''}
+                                                </span>
+                                            </div>
+                                            <div style={{ fontSize: '0.7rem', color: t2Win ? 'var(--success)' : 'var(--text-dim)', display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: '2px', marginTop: '1px' }}>
+                                                {t2Win ? <TrendingUp size={11} /> : <TrendingDown size={11} />}
+                                                <span style={{ fontWeight: 700, fontSize: '0.68rem' }}>{match.elo_delta_team2 > 0 ? `+${match.elo_delta_team2}` : match.elo_delta_team2}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            );
+                        })
                     )}
                 </AnimatePresence>
             </div>
@@ -316,8 +346,8 @@ export const History: React.FC<HistoryProps> = ({ onEdit }) => {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          margin-bottom: 2rem;
-          gap: 20px;
+          margin-bottom: 1.25rem;
+          gap: 12px;
         }
         @media (max-width: 768px) {
           .history-header {
@@ -325,7 +355,7 @@ export const History: React.FC<HistoryProps> = ({ onEdit }) => {
             align-items: flex-start;
           }
           .history-title {
-            font-size: 1.5rem !important;
+            font-size: 1.3rem !important;
           }
           .search-wrapper {
             width: 100% !important;
@@ -333,22 +363,14 @@ export const History: React.FC<HistoryProps> = ({ onEdit }) => {
           .search-input-history {
             width: 100% !important;
           }
-          .match-grid {
-            grid-template-columns: 1fr !important;
-            gap: 16px !important;
-            text-align: center !important;
-          }
-          .match-grid > div { text-align: center !important; }
-          .match-grid > div:nth-child(1) { order: 2; }
-          .match-grid > div:nth-child(2) { order: 1; }
-          .match-grid > div:nth-child(3) { order: 3; }
-          .player-name { font-size: 1.2rem !important; }
-          .score-box { padding: 10px 20px !important; font-size: 1.5rem !important; }
+          .player-name { font-size: 0.82rem !important; }
+          .score-box { padding: 3px 8px !important; font-size: 0.95rem !important; }
           .history-item-card {
-            padding: 20px !important;
+            padding: 8px 10px !important;
           }
         }
       `}</style>
         </div>
     );
 };
+
