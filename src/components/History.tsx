@@ -1,19 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { matchService, tournamentService, DEFAULT_TEAM_ROSTERS } from '../services/api';
+import { matchService, tournamentService } from '../services/api';
 import { Clock, TrendingUp, TrendingDown, Users, User, Trash2, Edit2, Trophy, Filter } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Tournament } from '../types';
-
-const playerToTeamMap = new Map<string, string>();
-Object.values(DEFAULT_TEAM_ROSTERS).forEach(team => {
-    team.memberIds.forEach(mId => playerToTeamMap.set(mId, team.id));
-});
-
-const getTeamForPlayer = (playerId?: string) => {
-    if (!playerId) return null;
-    const teamId = playerToTeamMap.get(playerId);
-    return teamId ? DEFAULT_TEAM_ROSTERS[teamId] : null;
-};
 
 interface HistoryProps {
     onEdit?: (match: any) => void;
@@ -158,8 +147,6 @@ export const History: React.FC<HistoryProps> = ({ onEdit }) => {
                         </motion.div>
                     ) : (
                         filteredMatches.map((match, index) => {
-                            const team1 = getTeamForPlayer(match.team1_player1_id) || getTeamForPlayer(match.team1_player2_id);
-                            const team2 = getTeamForPlayer(match.team2_player1_id) || getTeamForPlayer(match.team2_player2_id);
                             const t1Win = match.team1_score > match.team2_score;
                             const t2Win = match.team2_score > match.team1_score;
 
@@ -201,23 +188,6 @@ export const History: React.FC<HistoryProps> = ({ onEdit }) => {
                                                     gap: '3px'
                                                 }}>
                                                     <Trophy size={10} /> {match.tournament.name}
-                                                </span>
-                                            )}
-                                            {team1 && team2 && (
-                                                <span style={{
-                                                    background: 'rgba(255, 255, 255, 0.04)',
-                                                    border: '1px solid rgba(255, 255, 255, 0.08)',
-                                                    padding: '1px 6px',
-                                                    borderRadius: '6px',
-                                                    fontSize: '0.62rem',
-                                                    fontWeight: 800,
-                                                    display: 'inline-flex',
-                                                    alignItems: 'center',
-                                                    gap: '4px'
-                                                }}>
-                                                    <span style={{ color: team1.color }}>{team1.name}</span>
-                                                    <span style={{ color: 'var(--text-dim)', fontSize: '0.55rem' }}>VS</span>
-                                                    <span style={{ color: team2.color }}>{team2.name}</span>
                                                 </span>
                                             )}
                                             <span style={{ fontSize: '0.6rem', color: 'var(--text-dim)', display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
@@ -271,11 +241,6 @@ export const History: React.FC<HistoryProps> = ({ onEdit }) => {
                                                 >
                                                     {match.p1?.name}{match.p1b?.name ? ` & ${match.p1b.name}` : ''}
                                                 </span>
-                                                {team1 && (
-                                                    <span style={{ fontSize: '0.58rem', fontWeight: 900, color: team1.color, background: team1.badgeBg, padding: '1px 4px', borderRadius: '4px', border: `1px solid ${team1.color}30`, flexShrink: 0 }}>
-                                                        {team1.id}
-                                                    </span>
-                                                )}
                                             </div>
                                             <div style={{ fontSize: '0.7rem', color: t1Win ? 'var(--success)' : 'var(--text-dim)', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '2px', marginTop: '1px' }}>
                                                 {t1Win ? <TrendingUp size={11} /> : <TrendingDown size={11} />}
@@ -308,11 +273,6 @@ export const History: React.FC<HistoryProps> = ({ onEdit }) => {
                                         {/* Side 2 */}
                                         <div style={{ textAlign: 'left', minWidth: 0 }}>
                                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: '4px', minWidth: 0 }}>
-                                                {team2 && (
-                                                    <span style={{ fontSize: '0.58rem', fontWeight: 900, color: team2.color, background: team2.badgeBg, padding: '1px 4px', borderRadius: '4px', border: `1px solid ${team2.color}30`, flexShrink: 0 }}>
-                                                        {team2.id}
-                                                    </span>
-                                                )}
                                                 <span
                                                     className="player-name"
                                                     style={{
