@@ -122,4 +122,24 @@ export interface TournamentPlayerStats {
   current_streak: number;
 }
 
-
+export interface MatchSchedule {
+  id: string;
+  tournament_id: string;
+  week: number;
+  court?: string;
+  match_order?: number;
+  matchup_label?: string;
+  team1_player1_id?: string;
+  team1_player2_id?: string;
+  team2_player1_id?: string;
+  team2_player2_id?: string;
+  scheduled_date?: string;
+  status: 'pending' | 'completed';
+  match_id?: string;
+  created_at: string;
+  // Populated joins
+  p1?: { id: string; name: string };
+  p1b?: { id: string; name: string };
+  p2?: { id: string; name: string };
+  p2b?: { id: string; name: string };
+}

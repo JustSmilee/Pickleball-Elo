@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { tournamentService, playerService, DEFAULT_TEAM_ROSTERS } from '../services/api';
+import { tournamentService, playerService, scheduleService, DEFAULT_TEAM_ROSTERS } from '../services/api';
 
-import type { Tournament, TournamentPlayerStats, TournamentFormat, TournamentFixture, TournamentStandingsRow, Player, TeamMinigameStats } from '../types';
-import { Trophy, Plus, Calendar, CheckCircle2, Circle, X, Medal, ArrowRight, GitBranch, Repeat, Check, Users, BookOpen, ShieldAlert, Award, ChevronLeft } from 'lucide-react';
+import type { Tournament, TournamentPlayerStats, TournamentFormat, TournamentFixture, TournamentStandingsRow, Player, TeamMinigameStats, MatchSchedule } from '../types';
+import { Trophy, Plus, Calendar, CheckCircle2, Circle, X, Medal, ArrowRight, GitBranch, Repeat, Check, Users, BookOpen, ShieldAlert, Award, ChevronLeft, ClipboardList, Pencil, Trash2 } from 'lucide-react';
 
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -30,7 +30,38 @@ export const Tournaments: React.FC = () => {
     const [rrStandings, setRrStandings] = useState<TournamentStandingsRow[]>([]);
     const [loadingDetail, setLoadingDetail] = useState(false);
 
-    // Score Entry Modal State
+    // Match Schedules (pre-scheduled fixtures)
+    const [matchSchedules, setMatchSchedules] = useState<MatchSchedule[]>([]);
+
+    // Add Fixture Form State
+    const [showAddFixture, setShowAddFixture] = useState(false);
+    const [newFixtures, setNewFixtures] = useState<Array<{
+        court: string;
+        match_order: number;
+        matchup_label: string;
+        team1_player1_id: string;
+        team1_player2_id: string;
+        team2_player1_id: string;
+        team2_player2_id: string;
+    }>>([{
+        court: '',
+        match_order: 1,
+        matchup_label: '',
+        team1_player1_id: '',
+        team1_player2_id: '',
+        team2_player1_id: '',
+        team2_player2_id: '',
+    }]);
+    const [newFixtureWeek, setNewFixtureWeek] = useState<number>(1);
+    const [newFixtureDate, setNewFixtureDate] = useState<string>('');
+
+    // Score Entry Modal for Schedules
+    const [activeSchedule, setActiveSchedule] = useState<MatchSchedule | null>(null);
+    const [schedScore1, setSchedScore1] = useState<number | ''>('');
+    const [schedScore2, setSchedScore2] = useState<number | ''>('');
+    const [submittingScore, setSubmittingScore] = useState(false);
+
+    // Score Entry Modal State (existing fixtures)
     const [activeFixture, setActiveFixture] = useState<TournamentFixture | null>(null);
     const [score1, setScore1] = useState<number | ''>('');
     const [score2, setScore2] = useState<number | ''>('');
@@ -69,14 +100,16 @@ export const Tournaments: React.FC = () => {
         }
         setLoadingDetail(true);
         try {
-            const [board, matches, teamBoard] = await Promise.all([
+            const [board, matches, teamBoard, schedules] = await Promise.all([
                 tournamentService.getTournamentLeaderboard(t.id),
                 tournamentService.getTournamentMatches(t.id),
-                format === 'team_minigame' ? tournamentService.getTeamMinigameStandings(t.id) : Promise.resolve([])
+                format === 'team_minigame' ? tournamentService.getTeamMinigameStandings(t.id) : Promise.resolve([]),
+                format === 'team_minigame' ? scheduleService.getSchedules(t.id) : Promise.resolve([]),
             ]);
             setTLeaderboard(board);
             setTMatches(matches);
             setTeamStandings(teamBoard);
+            setMatchSchedules(schedules);
 
             const loadedFixtures = tournamentService.getTournamentFixtures(t.id);
             setFixtures(loadedFixtures);
@@ -99,12 +132,84 @@ export const Tournaments: React.FC = () => {
         setTeamStandings([]);
         setFixtures([]);
         setRrStandings([]);
+        setMatchSchedules([]);
+        setShowAddFixture(false);
     };
 
     const handleTogglePlayerEnrollment = (id: string) => {
         setEnrolledPlayerIds(prev =>
             prev.includes(id) ? prev.filter(pId => pId !== id) : [...prev, id]
         );
+    };
+
+    // ─── Schedule Handlers ────────────────────────────────────────────────────
+    const handleSaveNewFixtures = async () => {
+        if (!selectedTournament) return;
+        const valid = newFixtures.filter(f => f.team1_player1_id && f.team2_player1_id);
+        if (!valid.length) { alert('Vui lòng điền ít nhất 1 trận với người chơi đầy đủ.'); return; }
+
+        try {
+            const payload = valid.map((f, i) => ({
+                tournament_id: selectedTournament.id,
+                week: newFixtureWeek,
+                court: f.court || undefined,
+                match_order: f.match_order || i + 1,
+                matchup_label: f.matchup_label || undefined,
+                team1_player1_id: f.team1_player1_id || undefined,
+                team1_player2_id: f.team1_player2_id || undefined,
+                team2_player1_id: f.team2_player1_id || undefined,
+                team2_player2_id: f.team2_player2_id || undefined,
+                scheduled_date: newFixtureDate || undefined,
+            }));
+            const created = await scheduleService.createSchedules(payload);
+            setMatchSchedules(prev => [...prev, ...created]);
+            setShowAddFixture(false);
+            setNewFixtures([{ court: '', match_order: 1, matchup_label: '', team1_player1_id: '', team1_player2_id: '', team2_player1_id: '', team2_player2_id: '' }]);
+        } catch (err) {
+            console.error(err);
+            alert('Lỗi khi lưu lịch trận.');
+        }
+    };
+
+    const handleRecordScheduleScore = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!selectedTournament || !activeSchedule || schedScore1 === '' || schedScore2 === '') return;
+        setSubmittingScore(true);
+        try {
+            const freshPlayers = await playerService.getAllPlayers();
+            const { updatedSchedule } = await scheduleService.recordScheduleScore(
+                activeSchedule.id, activeSchedule,
+                Number(schedScore1), Number(schedScore2),
+                selectedTournament.id, freshPlayers
+            );
+            setMatchSchedules(prev => prev.map(s => s.id === updatedSchedule.id ? updatedSchedule : s));
+            // Refresh standings
+            const [newMatches, newStandings] = await Promise.all([
+                tournamentService.getTournamentMatches(selectedTournament.id),
+                tournamentService.getTeamMinigameStandings(selectedTournament.id),
+            ]);
+            setTMatches(newMatches);
+            setTeamStandings(newStandings);
+            setActiveSchedule(null);
+            setSchedScore1('');
+            setSchedScore2('');
+        } catch (err) {
+            console.error(err);
+            alert('Lỗi khi ghi nhận kết quả.');
+        } finally {
+            setSubmittingScore(false);
+        }
+    };
+
+    const handleDeleteSchedule = async (id: string) => {
+        if (!confirm('Xóa trận này khỏi lịch?')) return;
+        try {
+            await scheduleService.deleteSchedule(id);
+            setMatchSchedules(prev => prev.filter(s => s.id !== id));
+        } catch (err) {
+            console.error(err);
+            alert('Lỗi khi xóa lịch trận.');
+        }
     };
 
     const handleCreate = async (e: React.FormEvent) => {
@@ -224,19 +329,6 @@ export const Tournaments: React.FC = () => {
                 {roster.name}
             </span>
         );
-    };
-
-    // Filter matches for weekly schedule in team minigame
-    const getMatchesForWeek = (week: number) => {
-        return tMatches.filter(m => {
-            const dt = new Date(m.created_at);
-            const day = dt.getUTCDate();
-            const month = dt.getUTCMonth() + 1;
-            if (month !== 8) return week === 1;
-            if (week === 1) return day <= 15;
-            if (week === 2) return day > 15 && day <= 22;
-            return day > 22;
-        });
     };
 
     // ─── LOADING SKELETON ───────────────────────────────────────────────────────
@@ -741,180 +833,326 @@ export const Tournaments: React.FC = () => {
                                             )}
 
                                             {/* WEEKLY SCHEDULE */}
-                                            {teamTab === 'schedule' && (
-                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                                                    {/* Week Switcher */}
-                                                    <div className="weekly-switcher" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
-                                                        {[
-                                                            { week: 1, label: 'Tuần 1', date: '12/08', matchDesc: 'A vs B · C vs D' },
-                                                            { week: 2, label: 'Tuần 2', date: '19/08', matchDesc: 'A vs C · B vs D' },
-                                                            { week: 3, label: 'Tuần 3', date: '26/08', matchDesc: 'A vs D · B vs C' },
-                                                        ].map(w => {
-                                                            const isActive = selectedWeek === w.week;
-                                                            const matchCount = getMatchesForWeek(w.week).length;
-                                                            return (
-                                                                <motion.button
-                                                                    key={w.week}
-                                                                    whileTap={{ scale: 0.96 }}
-                                                                    onClick={() => setSelectedWeek(w.week)}
-                                                                    style={{
-                                                                        padding: '12px',
-                                                                        borderRadius: '14px',
-                                                                        border: isActive ? '1.5px solid var(--primary-neon)' : '1px solid var(--glass-border)',
-                                                                        background: isActive ? 'rgba(0,242,255,0.1)' : 'rgba(255,255,255,0.02)',
-                                                                        color: isActive ? 'var(--primary-neon)' : 'white',
-                                                                        fontWeight: 800,
-                                                                        fontSize: '0.8rem',
-                                                                        cursor: 'pointer',
-                                                                        textAlign: 'center',
-                                                                        transition: 'all 0.18s ease',
-                                                                        boxShadow: isActive ? '0 4px 16px rgba(0,242,255,0.15)' : 'none',
-                                                                    }}
-                                                                >
-                                                                    <div style={{ fontSize: '0.9rem', fontWeight: 900 }}>{w.label}</div>
-                                                                    <div style={{ fontSize: '0.72rem', color: isActive ? 'rgba(0,242,255,0.7)' : 'var(--text-dim)', marginTop: '2px' }}>📅 {w.date}</div>
-                                                                    <div style={{ fontSize: '0.65rem', opacity: 0.75, marginTop: '2px' }}>{w.matchDesc}</div>
-                                                                    {matchCount > 0 && (
-                                                                        <div style={{ marginTop: '6px', fontSize: '0.65rem', background: isActive ? 'rgba(0,242,255,0.15)' : 'rgba(255,255,255,0.06)', borderRadius: '8px', padding: '2px 6px', display: 'inline-block', fontWeight: 700 }}>
-                                                                            {matchCount} trận
-                                                                        </div>
-                                                                    )}
-                                                                </motion.button>
-                                                            );
-                                                        })}
-                                                    </div>
+                                            {teamTab === 'schedule' && (() => {
+                                                const weekSchedules = matchSchedules.filter(s => s.week === selectedWeek);
+                                                const courtGroups: Record<string, MatchSchedule[]> = {};
+                                                weekSchedules.forEach(s => {
+                                                    const c = s.court || 'Khác';
+                                                    if (!courtGroups[c]) courtGroups[c] = [];
+                                                    courtGroups[c].push(s);
+                                                });
+                                                const completedCount = weekSchedules.filter(s => s.status === 'completed').length;
+                                                const pendingCount = weekSchedules.filter(s => s.status === 'pending').length;
 
-                                                    {/* Match List */}
-                                                    <div>
-                                                        <h3 style={{ fontSize: '0.9rem', fontWeight: 800, color: 'white', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                            Trận Đấu Tuần {selectedWeek}
-                                                            <span style={{ fontSize: '0.75rem', color: 'var(--text-dim)', fontWeight: 600 }}>({getMatchesForWeek(selectedWeek).length} trận)</span>
-                                                        </h3>
-                                                        {getMatchesForWeek(selectedWeek).length === 0 ? (
-                                                            <div style={{ padding: '32px', textAlign: 'center', color: 'var(--text-dim)', background: 'rgba(255,255,255,0.02)', borderRadius: '16px', fontSize: '0.85rem', border: '1px dashed rgba(255,255,255,0.08)' }}>
-                                                                📭 Chưa có trận đấu nào trong tuần này.
+                                                return (
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                                        {/* Week Switcher */}
+                                                        <div className="weekly-switcher" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
+                                                            {[
+                                                                { week: 1, label: 'Tuần 1', date: '12/08', matchDesc: 'A vs B · C vs D' },
+                                                                { week: 2, label: 'Tuần 2', date: '19/08', matchDesc: 'A vs C · B vs D' },
+                                                                { week: 3, label: 'Tuần 3', date: '26/08', matchDesc: 'A vs D · B vs C' },
+                                                            ].map(w => {
+                                                                const isActive = selectedWeek === w.week;
+                                                                const wCount = matchSchedules.filter(s => s.week === w.week).length;
+                                                                const wDone = matchSchedules.filter(s => s.week === w.week && s.status === 'completed').length;
+                                                                return (
+                                                                    <motion.button
+                                                                        key={w.week}
+                                                                        whileTap={{ scale: 0.96 }}
+                                                                        onClick={() => setSelectedWeek(w.week)}
+                                                                        style={{
+                                                                            padding: '12px',
+                                                                            borderRadius: '14px',
+                                                                            border: isActive ? '1.5px solid var(--primary-neon)' : '1px solid var(--glass-border)',
+                                                                            background: isActive ? 'rgba(0,242,255,0.1)' : 'rgba(255,255,255,0.02)',
+                                                                            color: isActive ? 'var(--primary-neon)' : 'white',
+                                                                            fontWeight: 800, fontSize: '0.8rem', cursor: 'pointer',
+                                                                            textAlign: 'center', transition: 'all 0.18s ease',
+                                                                            boxShadow: isActive ? '0 4px 16px rgba(0,242,255,0.15)' : 'none',
+                                                                        }}
+                                                                    >
+                                                                        <div style={{ fontSize: '0.9rem', fontWeight: 900 }}>{w.label}</div>
+                                                                        <div style={{ fontSize: '0.72rem', color: isActive ? 'rgba(0,242,255,0.7)' : 'var(--text-dim)', marginTop: '2px' }}>📅 {w.date}</div>
+                                                                        <div style={{ fontSize: '0.65rem', opacity: 0.75, marginTop: '2px' }}>{w.matchDesc}</div>
+                                                                        {wCount > 0 && (
+                                                                            <div style={{ marginTop: '6px', fontSize: '0.65rem', background: isActive ? 'rgba(0,242,255,0.15)' : 'rgba(255,255,255,0.06)', borderRadius: '8px', padding: '2px 6px', display: 'inline-block', fontWeight: 700 }}>
+                                                                                {wDone}/{wCount} trận
+                                                                            </div>
+                                                                        )}
+                                                                    </motion.button>
+                                                                );
+                                                            })}
+                                                        </div>
+
+                                                        {/* Header + Add Button */}
+                                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+                                                            <div>
+                                                                <h3 style={{ fontSize: '0.9rem', fontWeight: 800, color: 'white', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                                    <ClipboardList size={16} color="var(--primary-neon)" /> Lịch Tuần {selectedWeek}
+                                                                </h3>
+                                                                {weekSchedules.length > 0 && (
+                                                                    <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)', marginTop: '3px' }}>
+                                                                        <span style={{ color: '#10b981' }}>✓ {completedCount} có KQ</span>
+                                                                        {pendingCount > 0 && <span style={{ marginLeft: '8px', color: '#f97316' }}>⏳ {pendingCount} chờ KQ</span>}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                            <motion.button
+                                                                whileTap={{ scale: 0.95 }}
+                                                                onClick={() => { setNewFixtureWeek(selectedWeek); setShowAddFixture(true); }}
+                                                                style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '12px', background: 'linear-gradient(135deg, rgba(0,242,255,0.15), rgba(0,242,255,0.05))', border: '1px solid rgba(0,242,255,0.3)', color: 'var(--primary-neon)', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer' }}
+                                                            >
+                                                                <Plus size={14} /> Thêm lịch trận
+                                                            </motion.button>
+                                                        </div>
+
+                                                        {/* Add Fixture Form */}
+                                                        <AnimatePresence>
+                                                            {showAddFixture && (
+                                                                <motion.div
+                                                                    initial={{ opacity: 0, y: -10 }}
+                                                                    animate={{ opacity: 1, y: 0 }}
+                                                                    exit={{ opacity: 0, y: -10 }}
+                                                                    style={{ background: '#111827', border: '1px solid rgba(0,242,255,0.2)', borderRadius: '16px', padding: '18px', display: 'flex', flexDirection: 'column', gap: '14px' }}
+                                                                >
+                                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                                        <h4 style={{ margin: 0, fontWeight: 800, color: 'var(--primary-neon)', fontSize: '0.9rem' }}>📋 Nhập lịch thi đấu Tuần {newFixtureWeek}</h4>
+                                                                        <button onClick={() => setShowAddFixture(false)} style={{ background: 'none', border: 'none', color: 'var(--text-dim)', cursor: 'pointer' }}><X size={18} /></button>
+                                                                    </div>
+
+                                                                    {/* Meta: Week + Date */}
+                                                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                                                                        <div>
+                                                                            <label style={{ fontSize: '0.72rem', color: 'var(--text-dim)', fontWeight: 700, display: 'block', marginBottom: '4px' }}>Tuần</label>
+                                                                            <select value={newFixtureWeek} onChange={e => setNewFixtureWeek(Number(e.target.value))}
+                                                                                style={{ width: '100%', background: '#1e2337', border: '1px solid var(--glass-border)', color: 'white', borderRadius: '10px', padding: '8px 10px', fontSize: '0.82rem' }}>
+                                                                                <option value={1}>Tuần 1 (12/08)</option>
+                                                                                <option value={2}>Tuần 2 (19/08)</option>
+                                                                                <option value={3}>Tuần 3 (26/08)</option>
+                                                                            </select>
+                                                                        </div>
+                                                                        <div>
+                                                                            <label style={{ fontSize: '0.72rem', color: 'var(--text-dim)', fontWeight: 700, display: 'block', marginBottom: '4px' }}>Ngày thi đấu</label>
+                                                                            <input type="date" value={newFixtureDate} onChange={e => setNewFixtureDate(e.target.value)}
+                                                                                style={{ width: '100%', background: '#1e2337', border: '1px solid var(--glass-border)', color: 'white', borderRadius: '10px', padding: '8px 10px', fontSize: '0.82rem', boxSizing: 'border-box' }} />
+                                                                        </div>
+                                                                    </div>
+
+                                                                    {/* Fixture rows */}
+                                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '420px', overflowY: 'auto' }}>
+                                                                        {newFixtures.map((f, i) => {
+                                                                            const sideATeamId = playerToTeamMap.get(f.team1_player1_id) || null;
+                                                                            const sideBTeamId = playerToTeamMap.get(f.team2_player1_id) || null;
+                                                                            const allPlayersA = sideATeamId ? players.filter(p => playerToTeamMap.get(p.id) === sideATeamId) : players;
+                                                                            const allPlayersB = sideBTeamId ? players.filter(p => playerToTeamMap.get(p.id) === sideBTeamId && playerToTeamMap.get(p.id) !== sideATeamId) : players.filter(p => playerToTeamMap.get(p.id) !== sideATeamId);
+
+                                                                            const updateFixture = (key: string, val: string | number) => {
+                                                                                setNewFixtures(prev => prev.map((row, idx) => idx === i ? { ...row, [key]: val } : row));
+                                                                            };
+
+                                                                            return (
+                                                                                <div key={i} style={{ background: '#161928', borderRadius: '12px', padding: '12px', border: '1px solid rgba(255,255,255,0.06)', position: 'relative' }}>
+                                                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                                                                                        <span style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-dim)' }}>Trận #{i + 1}</span>
+                                                                                        {newFixtures.length > 1 && (
+                                                                                            <button onClick={() => setNewFixtures(prev => prev.filter((_, idx) => idx !== i))}
+                                                                                                style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '2px' }}>
+                                                                                                <Trash2 size={14} />
+                                                                                            </button>
+                                                                                        )}
+                                                                                    </div>
+                                                                                    {/* Sân + Thứ tự + Nhãn đội */}
+                                                                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px 90px', gap: '8px', marginBottom: '10px' }}>
+                                                                                        <div>
+                                                                                            <label style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontWeight: 700, display: 'block', marginBottom: '3px' }}>Sân</label>
+                                                                                            <input value={f.court} onChange={e => updateFixture('court', e.target.value)} placeholder="Sân 6"
+                                                                                                style={{ width: '100%', background: '#1e2337', border: '1px solid var(--glass-border)', color: 'white', borderRadius: '8px', padding: '6px 8px', fontSize: '0.8rem', boxSizing: 'border-box' }} />
+                                                                                        </div>
+                                                                                        <div>
+                                                                                            <label style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontWeight: 700, display: 'block', marginBottom: '3px' }}>#Thứ tự</label>
+                                                                                            <input type="number" value={f.match_order} onChange={e => updateFixture('match_order', Number(e.target.value))} min={1}
+                                                                                                style={{ width: '100%', background: '#1e2337', border: '1px solid var(--glass-border)', color: 'white', borderRadius: '8px', padding: '6px 8px', fontSize: '0.8rem', boxSizing: 'border-box' }} />
+                                                                                        </div>
+                                                                                        <div>
+                                                                                            <label style={{ fontSize: '0.68rem', color: 'var(--text-dim)', fontWeight: 700, display: 'block', marginBottom: '3px' }}>Cặp đội</label>
+                                                                                            <input value={f.matchup_label} onChange={e => updateFixture('matchup_label', e.target.value)} placeholder="A-C"
+                                                                                                style={{ width: '100%', background: '#1e2337', border: '1px solid var(--glass-border)', color: 'white', borderRadius: '8px', padding: '6px 8px', fontSize: '0.8rem', boxSizing: 'border-box' }} />
+                                                                                        </div>
+                                                                                    </div>
+                                                                                    {/* Players */}
+                                                                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                                                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                                                                            <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--primary-neon)' }}>Bên 1</label>
+                                                                                            <select value={f.team1_player1_id} onChange={e => updateFixture('team1_player1_id', e.target.value)}
+                                                                                                style={{ background: '#1e2337', border: '1px solid var(--glass-border)', color: 'white', borderRadius: '8px', padding: '6px 8px', fontSize: '0.78rem' }}>
+                                                                                                <option value="">-- VĐV 1 --</option>
+                                                                                                {players.filter(p => playerToTeamMap.get(p.id) !== sideBTeamId).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                                                                            </select>
+                                                                                            <select value={f.team1_player2_id} onChange={e => updateFixture('team1_player2_id', e.target.value)}
+                                                                                                style={{ background: '#1e2337', border: '1px solid var(--glass-border)', color: 'white', borderRadius: '8px', padding: '6px 8px', fontSize: '0.78rem' }}>
+                                                                                                <option value="">-- VĐV 2 (đôi) --</option>
+                                                                                                {allPlayersA.filter(p => p.id !== f.team1_player1_id).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                                                                            </select>
+                                                                                        </div>
+                                                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                                                                            <label style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--secondary-neon)' }}>Bên 2</label>
+                                                                                            <select value={f.team2_player1_id} onChange={e => updateFixture('team2_player1_id', e.target.value)}
+                                                                                                style={{ background: '#1e2337', border: '1px solid var(--glass-border)', color: 'white', borderRadius: '8px', padding: '6px 8px', fontSize: '0.78rem' }}>
+                                                                                                <option value="">-- VĐV 1 --</option>
+                                                                                                {players.filter(p => playerToTeamMap.get(p.id) !== sideATeamId).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                                                                            </select>
+                                                                                            <select value={f.team2_player2_id} onChange={e => updateFixture('team2_player2_id', e.target.value)}
+                                                                                                style={{ background: '#1e2337', border: '1px solid var(--glass-border)', color: 'white', borderRadius: '8px', padding: '6px 8px', fontSize: '0.78rem' }}>
+                                                                                                <option value="">-- VĐV 2 (đôi) --</option>
+                                                                                                {allPlayersB.filter(p => p.id !== f.team2_player1_id).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                                                                            </select>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                </div>
+                                                                            );
+                                                                        })}
+                                                                    </div>
+
+                                                                    <div style={{ display: 'flex', gap: '10px', justifyContent: 'space-between', flexWrap: 'wrap' }}>
+                                                                        <button
+                                                                            onClick={() => setNewFixtures(prev => [...prev, { court: prev[prev.length - 1]?.court || '', match_order: (prev[prev.length - 1]?.match_order || 0) + 1, matchup_label: '', team1_player1_id: '', team1_player2_id: '', team2_player1_id: '', team2_player2_id: '' }])}
+                                                                            style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '7px 14px', borderRadius: '10px', border: '1px dashed rgba(255,255,255,0.2)', background: 'transparent', color: 'var(--text-dim)', fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer' }}
+                                                                        >
+                                                                            <Plus size={13} /> Thêm trận
+                                                                        </button>
+                                                                        <button
+                                                                            onClick={handleSaveNewFixtures}
+                                                                            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 20px', borderRadius: '10px', background: 'linear-gradient(135deg, var(--primary-neon), #00b4d8)', border: 'none', color: '#000', fontWeight: 900, fontSize: '0.85rem', cursor: 'pointer' }}
+                                                                        >
+                                                                            <Check size={14} /> Lưu lịch ({newFixtures.filter(f => f.team1_player1_id && f.team2_player1_id).length} trận)
+                                                                        </button>
+                                                                    </div>
+                                                                </motion.div>
+                                                            )}
+                                                        </AnimatePresence>
+
+                                                        {/* Schedule List grouped by court */}
+                                                        {weekSchedules.length === 0 ? (
+                                                            <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-dim)', background: 'rgba(255,255,255,0.02)', borderRadius: '16px', fontSize: '0.85rem', border: '1px dashed rgba(255,255,255,0.08)' }}>
+                                                                📭 Chưa có lịch trận nào. Bấm <strong style={{ color: 'var(--primary-neon)' }}>+ Thêm lịch trận</strong> để nhập lịch.
                                                             </div>
                                                         ) : (
-                                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '10px' }}>
-                                                                {getMatchesForWeek(selectedWeek).map((m, idx) => {
-                                                                    const team1 = getTeamForPlayer(m.team1_player1_id) || getTeamForPlayer(m.team1_player2_id);
-                                                                    const team2 = getTeamForPlayer(m.team2_player1_id) || getTeamForPlayer(m.team2_player2_id);
+                                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+                                                                {Object.entries(courtGroups).sort(([a], [b]) => a.localeCompare(b)).map(([court, matches]) => (
+                                                                    <div key={court}>
+                                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                                                                            <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: 'var(--primary-neon)', display: 'inline-block', flexShrink: 0 }} />
+                                                                            <span style={{ fontWeight: 800, fontSize: '0.88rem', color: 'white' }}>{court}</span>
+                                                                            <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>{matches.length} trận đấu</span>
+                                                                        </div>
+                                                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '10px' }}>
+                                                                            {matches.map((s, idx) => {
+                                                                                const t1 = getTeamForPlayer(s.team1_player1_id) || getTeamForPlayer(s.team1_player2_id);
+                                                                                const t2 = getTeamForPlayer(s.team2_player1_id) || getTeamForPlayer(s.team2_player2_id);
+                                                                                const isPending = s.status === 'pending';
 
-                                                                    return (
-                                                                        <motion.div
-                                                                            key={m.id || idx}
-                                                                            initial={{ opacity: 0, y: 6 }}
-                                                                            animate={{ opacity: 1, y: 0 }}
-                                                                            transition={{ delay: idx * 0.03 }}
-                                                                            style={{
-                                                                                padding: '14px 16px',
-                                                                                borderRadius: '16px',
-                                                                                background: '#171a2b',
-                                                                                border: '1px solid var(--glass-border)',
-                                                                                display: 'flex',
-                                                                                flexDirection: 'column',
-                                                                                gap: '10px'
-                                                                            }}
-                                                                        >
-                                                                            {/* Match Header: Number, Date, and Team Matchup */}
-                                                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.7rem', color: 'var(--text-dim)', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '6px' }}>
-                                                                                <span style={{ fontWeight: 700 }}>Trận #{idx + 1} · {new Date(m.created_at).toLocaleDateString('vi-VN')}</span>
-                                                                                {team1 && team2 && (
-                                                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                                                                        <span style={{ padding: '1px 6px', borderRadius: '5px', fontSize: '0.68rem', fontWeight: 800, background: team1.badgeBg, color: team1.color, border: `1px solid ${team1.color}40` }}>
-                                                                                            {team1.name}
-                                                                                        </span>
-                                                                                        <span style={{ fontSize: '0.62rem', color: 'var(--text-dim)', fontWeight: 800 }}>VS</span>
-                                                                                        <span style={{ padding: '1px 6px', borderRadius: '5px', fontSize: '0.68rem', fontWeight: 800, background: team2.badgeBg, color: team2.color, border: `1px solid ${team2.color}40` }}>
-                                                                                            {team2.name}
-                                                                                        </span>
-                                                                                    </div>
-                                                                                )}
-                                                                            </div>
+                                                                                return (
+                                                                                    <motion.div
+                                                                                        key={s.id}
+                                                                                        initial={{ opacity: 0, y: 6 }}
+                                                                                        animate={{ opacity: 1, y: 0 }}
+                                                                                        transition={{ delay: idx * 0.03 }}
+                                                                                        style={{
+                                                                                            padding: '12px 14px',
+                                                                                            borderRadius: '14px',
+                                                                                            background: isPending ? '#12151f' : '#171a2b',
+                                                                                            border: isPending ? '1px solid rgba(249,115,22,0.25)' : '1px solid rgba(16,185,129,0.25)',
+                                                                                            display: 'flex', flexDirection: 'column', gap: '8px',
+                                                                                            position: 'relative',
+                                                                                        }}
+                                                                                    >
+                                                                                        {/* Card header */}
+                                                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.68rem' }}>
+                                                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                                                                {s.matchup_label && (
+                                                                                                    <span style={{ fontWeight: 800, color: 'var(--text-dim)', background: 'rgba(255,255,255,0.06)', padding: '1px 6px', borderRadius: '5px' }}>{s.matchup_label}</span>
+                                                                                                )}
+                                                                                                <span style={{ color: isPending ? '#f97316' : '#10b981', fontWeight: 800 }}>
+                                                                                                    {isPending ? '⏳ Chờ KQ' : '✓ Có KQ'}
+                                                                                                </span>
+                                                                                            </div>
+                                                                                            <div style={{ display: 'flex', gap: '4px' }}>
+                                                                                                {isPending && (
+                                                                                                    <button
+                                                                                                        onClick={() => { setActiveSchedule(s); setSchedScore1(''); setSchedScore2(''); }}
+                                                                                                        title="Nhập kết quả"
+                                                                                                        style={{ background: 'rgba(0,242,255,0.1)', border: '1px solid rgba(0,242,255,0.3)', color: 'var(--primary-neon)', borderRadius: '6px', padding: '3px 7px', cursor: 'pointer', fontWeight: 700, fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '3px' }}
+                                                                                                    >
+                                                                                                        <Pencil size={10} /> KQ
+                                                                                                    </button>
+                                                                                                )}
+                                                                                                <button
+                                                                                                    onClick={() => handleDeleteSchedule(s.id)}
+                                                                                                    title="Xóa"
+                                                                                                    style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', color: '#ef4444', borderRadius: '6px', padding: '3px 5px', cursor: 'pointer' }}
+                                                                                                >
+                                                                                                    <Trash2 size={10} />
+                                                                                                </button>
+                                                                                            </div>
+                                                                                        </div>
 
-                                                                            {/* Team 1 Side */}
-                                                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem' }}>
-                                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
-                                                                                    {team1 && (
-                                                                                        <span style={{
-                                                                                            fontSize: '0.68rem',
-                                                                                            fontWeight: 900,
-                                                                                            color: team1.color,
-                                                                                            background: team1.badgeBg,
-                                                                                            padding: '1px 6px',
-                                                                                            borderRadius: '5px',
-                                                                                            border: `1px solid ${team1.color}35`,
-                                                                                            flexShrink: 0
-                                                                                        }}>
-                                                                                            {team1.id}
-                                                                                        </span>
-                                                                                    )}
-                                                                                    <span style={{
-                                                                                        fontWeight: m.team1_score > m.team2_score ? 900 : 500,
-                                                                                        color: m.team1_score > m.team2_score ? 'var(--primary-neon)' : 'white',
-                                                                                        overflow: 'hidden',
-                                                                                        textOverflow: 'ellipsis',
-                                                                                        whiteSpace: 'nowrap'
-                                                                                    }}>
-                                                                                        {m.p1?.name}{m.p1b?.name ? ` & ${m.p1b.name}` : ''}
-                                                                                    </span>
-                                                                                </div>
-                                                                                <span style={{
-                                                                                    fontWeight: 900,
-                                                                                    color: m.team1_score > m.team2_score ? 'var(--primary-neon)' : 'gold',
-                                                                                    fontSize: '1.1rem',
-                                                                                    marginLeft: '10px',
-                                                                                    fontFamily: 'var(--font-heading)'
-                                                                                }}>
-                                                                                    {m.team1_score}
-                                                                                </span>
-                                                                            </div>
+                                                                                        {/* Team matchup badge */}
+                                                                                        {t1 && t2 && (
+                                                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', justifyContent: 'center', paddingBottom: '4px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                                                                                <span style={{ padding: '1px 7px', borderRadius: '5px', fontSize: '0.7rem', fontWeight: 800, background: t1.badgeBg, color: t1.color, border: `1px solid ${t1.color}40` }}>{t1.name}</span>
+                                                                                                <span style={{ fontSize: '0.6rem', color: 'var(--text-dim)', fontWeight: 800 }}>VS</span>
+                                                                                                <span style={{ padding: '1px 7px', borderRadius: '5px', fontSize: '0.7rem', fontWeight: 800, background: t2.badgeBg, color: t2.color, border: `1px solid ${t2.color}40` }}>{t2.name}</span>
+                                                                                            </div>
+                                                                                        )}
 
-                                                                            {/* Team 2 Side */}
-                                                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem' }}>
-                                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
-                                                                                    {team2 && (
-                                                                                        <span style={{
-                                                                                            fontSize: '0.68rem',
-                                                                                            fontWeight: 900,
-                                                                                            color: team2.color,
-                                                                                            background: team2.badgeBg,
-                                                                                            padding: '1px 6px',
-                                                                                            borderRadius: '5px',
-                                                                                            border: `1px solid ${team2.color}35`,
-                                                                                            flexShrink: 0
-                                                                                        }}>
-                                                                                            {team2.id}
-                                                                                        </span>
-                                                                                    )}
-                                                                                    <span style={{
-                                                                                        fontWeight: m.team2_score > m.team1_score ? 900 : 500,
-                                                                                        color: m.team2_score > m.team1_score ? 'var(--secondary-neon)' : 'white',
-                                                                                        overflow: 'hidden',
-                                                                                        textOverflow: 'ellipsis',
-                                                                                        whiteSpace: 'nowrap'
-                                                                                    }}>
-                                                                                        {m.p2?.name}{m.p2b?.name ? ` & ${m.p2b.name}` : ''}
-                                                                                    </span>
-                                                                                </div>
-                                                                                <span style={{
-                                                                                    fontWeight: 900,
-                                                                                    color: m.team2_score > m.team1_score ? 'var(--secondary-neon)' : 'gold',
-                                                                                    fontSize: '1.1rem',
-                                                                                    marginLeft: '10px',
-                                                                                    fontFamily: 'var(--font-heading)'
-                                                                                }}>
-                                                                                    {m.team2_score}
-                                                                                </span>
-                                                                            </div>
-                                                                        </motion.div>
-                                                                    );
-                                                                })}
+                                                                                        {/* Bên 1 */}
+                                                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.82rem' }}>
+                                                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
+                                                                                                {t1 && <span style={{ fontSize: '0.62rem', fontWeight: 900, color: t1.color, background: t1.badgeBg, padding: '1px 4px', borderRadius: '4px', flexShrink: 0 }}>{t1.id}</span>}
+                                                                                                <span style={{
+                                                                                                    fontWeight: !isPending && s.match_id ? 900 : 600,
+                                                                                                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                                                                                                    color: 'white',
+                                                                                                }}>
+                                                                                                    {s.p1?.name || '—'}{s.p1b?.name ? ` & ${s.p1b.name}` : ''}
+                                                                                                </span>
+                                                                                            </div>
+                                                                                        </div>
+
+                                                                                        {/* Bên 2 */}
+                                                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.82rem' }}>
+                                                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
+                                                                                                {t2 && <span style={{ fontSize: '0.62rem', fontWeight: 900, color: t2.color, background: t2.badgeBg, padding: '1px 4px', borderRadius: '4px', flexShrink: 0 }}>{t2.id}</span>}
+                                                                                                <span style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'white' }}>
+                                                                                                    {s.p2?.name || '—'}{s.p2b?.name ? ` & ${s.p2b.name}` : ''}
+                                                                                                </span>
+                                                                                            </div>
+                                                                                        </div>
+
+                                                                                        {/* Score (if completed) */}
+                                                                                        {!isPending && (
+                                                                                            <div style={{ marginTop: '2px', textAlign: 'center', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '6px' }}>
+                                                                                                <span style={{ fontFamily: 'var(--font-heading)', fontSize: '1.1rem', fontWeight: 900, color: 'gold', letterSpacing: '0.1em' }}>
+                                                                                                    {/* Score shown via tMatches lookup */}
+                                                                                                    {(() => {
+                                                                                                        const m = tMatches.find(tm => tm.id === s.match_id);
+                                                                                                        return m ? `${m.team1_score} – ${m.team2_score}` : '— – —';
+                                                                                                    })()}
+                                                                                                </span>
+                                                                                            </div>
+                                                                                        )}
+                                                                                    </motion.div>
+                                                                                );
+                                                                            })}
+                                                                        </div>
+                                                                    </div>
+                                                                ))}
                                                             </div>
                                                         )}
                                                     </div>
-                                                </div>
-                                            )}
+                                                );
+                                            })()}
 
                                             {/* RULES TAB */}
                                             {teamTab === 'rules' && (
@@ -1274,6 +1512,88 @@ export const Tournaments: React.FC = () => {
                                 <div style={{ display: 'flex', gap: '8px' }}>
                                     <button type="button" onClick={() => setActiveFixture(null)} style={{ flex: 1, padding: '11px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', borderRadius: '12px', fontWeight: 700, cursor: 'pointer' }}>Hủy</button>
                                     <button type="submit" className="neon-btn" style={{ flex: 1, padding: '11px', borderRadius: '12px' }}>Lưu Tỷ Số</button>
+                                </div>
+                            </form>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* ── SCHEDULE SCORE ENTRY MODAL ──────────────────────────────────────── */}
+            <AnimatePresence>
+                {activeSchedule && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={() => { setActiveSchedule(null); }}
+                        style={{ position: 'fixed', inset: 0, zIndex: 10001, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(14px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.88, y: 20 }}
+                            animate={{ scale: 1, y: 0 }}
+                            exit={{ scale: 0.88, y: 20 }}
+                            onClick={e => e.stopPropagation()}
+                            className="glass-card"
+                            style={{ width: '100%', maxWidth: '380px', padding: '24px', borderRadius: '22px', border: '1px solid rgba(0,242,255,0.3)', boxShadow: '0 20px 60px rgba(0,0,0,0.6)' }}
+                        >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                                <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'white' }}>🎯 Nhập Kết Quả Trận</h3>
+                                <button onClick={() => setActiveSchedule(null)} style={{ background: 'none', border: 'none', color: 'var(--text-dim)', cursor: 'pointer' }}>
+                                    <X size={18} />
+                                </button>
+                            </div>
+                            {activeSchedule.matchup_label && (
+                                <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)', marginBottom: '16px' }}>
+                                    Cặp đội: <strong style={{ color: 'gold' }}>{activeSchedule.matchup_label}</strong>
+                                    {activeSchedule.court && <> · {activeSchedule.court}</>}
+                                </div>
+                            )}
+                            <form onSubmit={handleRecordScheduleScore} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px' }}>
+                                    {/* Side 1 */}
+                                    <div style={{ flex: 1, textAlign: 'center' }}>
+                                        {(() => {
+                                            const t1 = getTeamForPlayer(activeSchedule.team1_player1_id) || getTeamForPlayer(activeSchedule.team1_player2_id);
+                                            return t1 && <div style={{ fontSize: '0.65rem', fontWeight: 900, color: t1.color, background: t1.badgeBg, padding: '1px 6px', borderRadius: '5px', display: 'inline-block', marginBottom: '4px' }}>{t1.name}</div>;
+                                        })()}
+                                        <div style={{ fontWeight: 800, fontSize: '0.82rem', color: 'var(--primary-neon)', marginBottom: '8px', lineHeight: 1.3 }}>
+                                            {activeSchedule.p1?.name || '—'}
+                                            {activeSchedule.p1b?.name && <><br /><span style={{ fontSize: '0.72rem' }}>{activeSchedule.p1b.name}</span></>}
+                                        </div>
+                                        <input
+                                            type="number" min={0} value={schedScore1}
+                                            onChange={e => setSchedScore1(e.target.value === '' ? '' : Number(e.target.value))}
+                                            placeholder="0" required autoFocus
+                                            style={{ textAlign: 'center', fontSize: '1.5rem', fontWeight: 900, height: '54px', padding: '0', width: '100%' }}
+                                        />
+                                    </div>
+                                    <div style={{ textAlign: 'center', paddingTop: '52px' }}>
+                                        <div style={{ fontWeight: 900, fontSize: '1rem', color: 'var(--text-dim)' }}>VS</div>
+                                    </div>
+                                    {/* Side 2 */}
+                                    <div style={{ flex: 1, textAlign: 'center' }}>
+                                        {(() => {
+                                            const t2 = getTeamForPlayer(activeSchedule.team2_player1_id) || getTeamForPlayer(activeSchedule.team2_player2_id);
+                                            return t2 && <div style={{ fontSize: '0.65rem', fontWeight: 900, color: t2.color, background: t2.badgeBg, padding: '1px 6px', borderRadius: '5px', display: 'inline-block', marginBottom: '4px' }}>{t2.name}</div>;
+                                        })()}
+                                        <div style={{ fontWeight: 800, fontSize: '0.82rem', color: 'var(--secondary-neon)', marginBottom: '8px', lineHeight: 1.3 }}>
+                                            {activeSchedule.p2?.name || '—'}
+                                            {activeSchedule.p2b?.name && <><br /><span style={{ fontSize: '0.72rem' }}>{activeSchedule.p2b.name}</span></>}
+                                        </div>
+                                        <input
+                                            type="number" min={0} value={schedScore2}
+                                            onChange={e => setSchedScore2(e.target.value === '' ? '' : Number(e.target.value))}
+                                            placeholder="0" required
+                                            style={{ textAlign: 'center', fontSize: '1.5rem', fontWeight: 900, height: '54px', padding: '0', width: '100%' }}
+                                        />
+                                    </div>
+                                </div>
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                    <button type="button" onClick={() => setActiveSchedule(null)} style={{ flex: 1, padding: '11px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', borderRadius: '12px', fontWeight: 700, cursor: 'pointer' }}>Hủy</button>
+                                    <button type="submit" className="neon-btn" disabled={submittingScore} style={{ flex: 1, padding: '11px', borderRadius: '12px', opacity: submittingScore ? 0.7 : 1 }}>
+                                        {submittingScore ? 'Đang lưu...' : 'Lưu Kết Quả'}
+                                    </button>
                                 </div>
                             </form>
                         </motion.div>

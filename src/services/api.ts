@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import type { Player, Match, TournamentPlayerStats, TournamentFormat, TournamentFixture, TournamentStandingsRow, TeamRoster, TeamMinigameStats } from '../types';
+import type { Player, Match, TournamentPlayerStats, TournamentFormat, TournamentFixture, TournamentStandingsRow, TeamRoster, TeamMinigameStats, MatchSchedule } from '../types';
 import { calculateEloDelta } from '../utils/elo';
 
 
@@ -839,5 +839,128 @@ export const tournamentService = {
     }
 };
 
+// ─── Schedule Service ──────────────────────────────────────────────────────────
+// Manages pre-scheduled match fixtures for team minigame
 
+export const scheduleService = {
+    async getSchedules(tournamentId: string, week?: number): Promise<MatchSchedule[]> {
+        if (!supabase) return [];
+        let query = supabase
+            .from('match_schedules')
+            .select('*, p1:team1_player1_id(id,name), p1b:team1_player2_id(id,name), p2:team2_player1_id(id,name), p2b:team2_player2_id(id,name)')
+            .eq('tournament_id', tournamentId)
+            .order('court', { ascending: true })
+            .order('match_order', { ascending: true });
 
+        if (week !== undefined) {
+            query = query.eq('week', week);
+        }
+
+        const { data, error } = await query;
+        if (error) {
+            console.error('getSchedules error:', error);
+            return [];
+        }
+        return (data || []) as any[];
+    },
+
+    async createSchedules(schedules: Omit<MatchSchedule, 'id' | 'created_at' | 'status' | 'p1' | 'p1b' | 'p2' | 'p2b'>[]): Promise<MatchSchedule[]> {
+        if (!supabase) return [];
+        const payload = schedules.map(s => ({ ...s, status: 'pending' }));
+        const { data, error } = await supabase
+            .from('match_schedules')
+            .insert(payload)
+            .select('*, p1:team1_player1_id(id,name), p1b:team1_player2_id(id,name), p2:team2_player1_id(id,name), p2b:team2_player2_id(id,name)');
+        if (error) throw error;
+        return (data || []) as any[];
+    },
+
+    async deleteSchedule(id: string): Promise<void> {
+        if (!supabase) return;
+        const { error } = await supabase.from('match_schedules').delete().eq('id', id);
+        if (error) throw error;
+    },
+
+    async recordScheduleScore(
+        scheduleId: string,
+        schedule: MatchSchedule,
+        score1: number,
+        score2: number,
+        tournamentId: string,
+        players: Player[]
+    ): Promise<{ updatedSchedule: MatchSchedule; matchId: string }> {
+        if (!supabase) throw new Error('No Supabase client');
+
+        const {
+            team1_player1_id: p1id, team1_player2_id: p1bid,
+            team2_player1_id: p2id, team2_player2_id: p2bid
+        } = schedule;
+
+        if (!p1id || !p2id) throw new Error('Missing player IDs on schedule');
+
+        const isDoubles = !!(p1bid && p2bid);
+
+        // Compute Elo delta
+        let delta = 0;
+        if (isDoubles) {
+            const p1a = players.find(p => p.id === p1id);
+            const p1b = players.find(p => p.id === p1bid);
+            const p2a = players.find(p => p.id === p2id);
+            const p2b = players.find(p => p.id === p2bid);
+            if (p1a && p1b && p2a && p2b) {
+                const avg1 = (p1a.elo_rating + p1b.elo_rating) / 2;
+                const avg2 = (p2a.elo_rating + p2b.elo_rating) / 2;
+                delta = calculateEloDelta(avg1, avg2, score1, score2);
+            }
+        } else {
+            const p1 = players.find(p => p.id === p1id);
+            const p2 = players.find(p => p.id === p2id);
+            if (p1 && p2) {
+                delta = calculateEloDelta(p1.elo_rating, p2.elo_rating, score1, score2);
+            }
+        }
+
+        // Insert into matches
+        const { data: matchData, error: matchError } = await supabase
+            .from('matches')
+            .insert({
+                type: isDoubles ? 'doubles' : 'singles',
+                team1_player1_id: p1id,
+                team1_player2_id: p1bid || null,
+                team2_player1_id: p2id,
+                team2_player2_id: p2bid || null,
+                team1_score: score1,
+                team2_score: score2,
+                elo_delta_team1: delta,
+                elo_delta_team2: -delta,
+                tournament_id: tournamentId
+            })
+            .select()
+            .single();
+
+        if (matchError) throw matchError;
+        const matchId = matchData.id;
+
+        // Update Elo ratings
+        const team1Win = score1 > score2;
+        const updates: Promise<any>[] = [
+            playerService.updatePlayerRating(p1id, players.find(p => p.id === p1id)!.elo_rating + delta, team1Win),
+            playerService.updatePlayerRating(p2id, players.find(p => p.id === p2id)!.elo_rating - delta, !team1Win),
+        ];
+        if (isDoubles && p1bid) updates.push(playerService.updatePlayerRating(p1bid, players.find(p => p.id === p1bid)!.elo_rating + delta, team1Win));
+        if (isDoubles && p2bid) updates.push(playerService.updatePlayerRating(p2bid, players.find(p => p.id === p2bid)!.elo_rating - delta, !team1Win));
+        await Promise.all(updates);
+
+        // Mark schedule as completed
+        const { data: updatedData, error: updateError } = await supabase
+            .from('match_schedules')
+            .update({ status: 'completed', match_id: matchId })
+            .eq('id', scheduleId)
+            .select('*, p1:team1_player1_id(id,name), p1b:team1_player2_id(id,name), p2:team2_player1_id(id,name), p2b:team2_player2_id(id,name)')
+            .single();
+
+        if (updateError) throw updateError;
+
+        return { updatedSchedule: updatedData as any, matchId };
+    },
+};
