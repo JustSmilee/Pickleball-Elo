@@ -2,7 +2,6 @@ import { supabase } from '../lib/supabase';
 import type { Player, Match, TournamentPlayerStats, TournamentFormat, TournamentFixture, TournamentStandingsRow, TeamRoster, TeamMinigameStats, MatchSchedule } from '../types';
 import { calculateEloDelta } from '../utils/elo';
 
-
 export const playerService = {
     async getAllPlayers(): Promise<Player[]> {
         if (!supabase) return [];
@@ -346,6 +345,15 @@ export const tournamentService = {
         });
     },
 
+    async updateTournamentStatus(id: string, status: 'active' | 'completed'): Promise<void> {
+        if (!supabase) return;
+        const { error } = await supabase
+            .from('tournaments')
+            .update({ status })
+            .eq('id', id);
+        if (error) throw error;
+    },
+
     async createTournament(
         name: string,
         format: TournamentFormat = 'elo_only',
@@ -378,7 +386,6 @@ export const tournamentService = {
 
         return { ...tourney, format };
     },
-
 
     async getTournamentLeaderboard(tournamentId: string): Promise<TournamentPlayerStats[]> {
         if (!supabase) return [];
@@ -544,8 +551,6 @@ export const tournamentService = {
         let totalSlots = Math.pow(2, numRounds); // e.g. 4 or 8
 
         // Seed players into round 1
-
-        // Create placeholders for all rounds
         let globalIndex = 1;
         const roundFixturesMap: Record<number, TournamentFixture[]> = {};
 
@@ -721,11 +726,12 @@ export const tournamentService = {
                 matchPoints: 0,
                 weeklyBonus: 0,
                 totalPoints: 0,
-                weeklyWins: { 1: 0, 2: 0, 3: 0 }
+                weeklyWins: { 1: 0, 2: 0, 3: 0 },
+                weeklyStats: {}
             };
         });
 
-        // Weekly team stats tracking (to find the single best team per week):
+        // Weekly team stats tracking
         const weeklyTeamStats: Record<number, Record<string, { wins: number, losses: number, ptsFor: number, ptsAgainst: number, scoreDiff: number, played: number }>> = {
             1: { A: { wins: 0, losses: 0, ptsFor: 0, ptsAgainst: 0, scoreDiff: 0, played: 0 }, B: { wins: 0, losses: 0, ptsFor: 0, ptsAgainst: 0, scoreDiff: 0, played: 0 }, C: { wins: 0, losses: 0, ptsFor: 0, ptsAgainst: 0, scoreDiff: 0, played: 0 }, D: { wins: 0, losses: 0, ptsFor: 0, ptsAgainst: 0, scoreDiff: 0, played: 0 } },
             2: { A: { wins: 0, losses: 0, ptsFor: 0, ptsAgainst: 0, scoreDiff: 0, played: 0 }, B: { wins: 0, losses: 0, ptsFor: 0, ptsAgainst: 0, scoreDiff: 0, played: 0 }, C: { wins: 0, losses: 0, ptsFor: 0, ptsAgainst: 0, scoreDiff: 0, played: 0 }, D: { wins: 0, losses: 0, ptsFor: 0, ptsAgainst: 0, scoreDiff: 0, played: 0 } },
@@ -803,14 +809,12 @@ export const tournamentService = {
             st.scoreDiff = st.ptsFor - st.ptsAgainst;
         });
 
-        // Calculate weekly bonus (+2 points for the SINGLE best team of each week)
-        Object.entries(weeklyTeamStats).forEach(([wStr, teamDataMap]) => {
-            const wNum = Number(wStr);
+        // Calculate weekly bonus (+2 points for the SINGLE best team of each week) & build weeklyStats
+        [1, 2, 3].forEach((wNum) => {
+            const teamDataMap = weeklyTeamStats[wNum] || {};
             const candidates = Object.entries(teamDataMap)
                 .map(([teamId, wStat]) => ({ teamId, ...wStat }))
                 .filter(t => t.played > 0);
-
-            if (candidates.length === 0) return;
 
             // Sort candidates to find the #1 best team in this week
             candidates.sort((a, b) =>
@@ -820,10 +824,28 @@ export const tournamentService = {
             );
 
             const topTeam = candidates[0];
-            if (topTeam && topTeam.wins > 0 && stats[topTeam.teamId]) {
-                stats[topTeam.teamId].weeklyBonus += 2;
-                stats[topTeam.teamId].weeklyWins[wNum] = 1;
+            const topTeamId = topTeam && topTeam.wins > 0 ? topTeam.teamId : null;
+
+            if (topTeamId && stats[topTeamId]) {
+                stats[topTeamId].weeklyBonus += 2;
+                stats[topTeamId].weeklyWins[wNum] = 1;
             }
+
+            Object.values(stats).forEach(st => {
+                if (!st.weeklyStats) st.weeklyStats = {};
+                const tPerf = teamDataMap[st.teamId] || { wins: 0, losses: 0, ptsFor: 0, ptsAgainst: 0, scoreDiff: 0, played: 0 };
+                const isWinner = topTeamId === st.teamId;
+                st.weeklyStats[wNum] = {
+                    played: tPerf.played,
+                    wins: tPerf.wins,
+                    losses: tPerf.losses,
+                    ptsFor: tPerf.ptsFor,
+                    ptsAgainst: tPerf.ptsAgainst,
+                    scoreDiff: tPerf.scoreDiff,
+                    isWeeklyWinner: isWinner,
+                    bonus: isWinner ? 2 : 0,
+                };
+            });
         });
 
         // Total points calculation

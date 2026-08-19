@@ -8,33 +8,39 @@ import { PlayerProfile } from './components/PlayerProfile';
 import { Compare } from './components/Compare';
 import { Tournaments } from './components/Tournaments';
 import { InstallPrompt } from './components/InstallPrompt';
-import { matchService } from './services/api';
-import { LayoutDashboard, Trophy, List, PlusCircle, Users, BarChart } from 'lucide-react';
+import { matchService, tournamentService } from './services/api';
+import type { Tournament } from './types';
+import { LayoutDashboard, Trophy, List, PlusCircle, Users, BarChart, ArrowRight, Calendar, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Analytics } from '@vercel/analytics/react';
-
 
 const StatsCard = ({ label, value, sub, color = 'var(--primary-neon)' }: { label: string, value: string | number, sub: string, color?: string }) => (
   <motion.div
     whileHover={{ y: -4 }}
-    className="glass-card"
-    style={{ padding: '16px 20px', position: 'relative', overflow: 'hidden' }}
+    className="glass-card stat-card-inner"
+    style={{ padding: '14px 16px', position: 'relative', overflow: 'hidden' }}
   >
     <div style={{ position: 'absolute', top: 0, left: 0, width: '4px', height: '100%', background: color }}></div>
-    <div style={{ color: 'var(--text-dim)', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '4px', fontFamily: 'var(--font-cute)' }}>{label}</div>
-    <div style={{ color: 'white', fontWeight: 900, fontSize: '1.8rem', fontFamily: 'var(--font-heading)', lineHeight: 1 }}>{value}</div>
-    <div style={{ color: 'var(--text-dim)', fontSize: '0.75rem', marginTop: '4px' }}>{sub}</div>
+    <div className="stat-label" style={{ color: 'var(--text-dim)', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '4px', fontFamily: 'var(--font-cute)' }}>{label}</div>
+    <div className="stat-value" style={{ color: 'white', fontWeight: 900, fontSize: '1.6rem', fontFamily: 'var(--font-heading)', lineHeight: 1 }}>{value}</div>
+    <div className="stat-sub" style={{ color: 'var(--text-dim)', fontSize: '0.7rem', marginTop: '4px' }}>{sub}</div>
   </motion.div>
 );
 
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [stats, setStats] = useState({ totalMatches: 0, activePlayers: 0 });
+  const [activeTournaments, setActiveTournaments] = useState<Tournament[]>([]);
   const [editingMatch, setEditingMatch] = useState<any>(null);
   const [selectedPlayer, setSelectedPlayer] = useState<any>(null);
+  const [selectedTournamentId, setSelectedTournamentId] = useState<string | null>(null);
 
   useEffect(() => {
     matchService.getStats().then(setStats).catch(console.error);
+    tournamentService.getAllTournaments().then(all => {
+      const active = all.filter(t => t.status === 'active');
+      setActiveTournaments(active);
+    }).catch(console.error);
   }, [activeTab]);
 
   const handleEditMatch = (match: any) => {
@@ -44,6 +50,11 @@ function App() {
 
   const handleViewProfile = (player: any) => {
     setSelectedPlayer(player);
+  };
+
+  const handleOpenTournament = (tourneyId: string) => {
+    setSelectedTournamentId(tourneyId);
+    setActiveTab('tournaments');
   };
 
   const navItems = [
@@ -113,7 +124,7 @@ function App() {
           >
 
             {activeTab === 'dashboard' && (
-              <div style={{ display: 'grid', gap: '24px' }}>
+              <div style={{ display: 'grid', gap: '20px' }}>
                 <header style={{ textAlign: 'center', padding: '10px 0' }}>
                   <motion.h1
                     className="neon-text"
@@ -126,17 +137,20 @@ function App() {
                   </p>
                 </header>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px' }}>
-                  <StatsCard label="Trận đấu" value={stats.totalMatches} sub="Đã ghi nhận" color="var(--primary-neon)" />
-                  <StatsCard label="Người chơi" value={stats.activePlayers} sub="Đang thi đấu" color="var(--secondary-neon)" />
+                {/* Stats Cards Section (Responsive: 1 row on mobile for matches & players) */}
+                <div className="stats-dashboard-grid">
+                  <div className="stats-cards-pair">
+                    <StatsCard label="Trận đấu" value={stats.totalMatches} sub="Đã ghi nhận" color="var(--primary-neon)" />
+                    <StatsCard label="Người chơi" value={stats.activePlayers} sub="Đang thi đấu" color="var(--secondary-neon)" />
+                  </div>
                   <motion.a
                     href="https://t.me/pickle_elo_rank_bot"
                     target="_blank"
                     rel="noreferrer"
                     whileHover={{ y: -4 }}
-                    className="glass-card"
+                    className="glass-card telegram-card"
                     style={{ 
-                      padding: '16px 20px', 
+                      padding: '14px 18px', 
                       position: 'relative', 
                       overflow: 'hidden', 
                       textDecoration: 'none', 
@@ -148,18 +162,93 @@ function App() {
                     }}
                   >
                     <div style={{ position: 'absolute', top: 0, left: 0, width: '4px', height: '100%', background: '#0088cc' }}></div>
-                    <div style={{ color: '#0088cc', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '4px', fontFamily: 'var(--font-cute)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <div style={{ color: '#0088cc', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '4px', fontFamily: 'var(--font-cute)', display: 'flex', alignItems: 'center', gap: '6px' }}>
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.74-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z"/>
                       </svg>
                       Kênh hỗ trợ
                     </div>
-                    <div style={{ color: 'white', fontWeight: 900, fontSize: '1.4rem', fontFamily: 'var(--font-heading)', lineHeight: 1.2 }}>Telegram Bot</div>
-                    <div style={{ color: 'var(--text-dim)', fontSize: '0.75rem', marginTop: '4px' }}>@pickle_elo_rank_bot</div>
+                    <div style={{ color: 'white', fontWeight: 900, fontSize: '1.3rem', fontFamily: 'var(--font-heading)', lineHeight: 1.2 }}>Telegram Bot</div>
+                    <div style={{ color: 'var(--text-dim)', fontSize: '0.7rem', marginTop: '4px' }}>@pickle_elo_rank_bot</div>
                   </motion.a>
                 </div>
 
-                <div style={{ marginTop: '1rem' }}>
+                {/* Active Tournaments on Dashboard */}
+                {activeTournaments.length > 0 && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--primary-neon)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <Sparkles size={14} /> Giải đấu đang diễn ra
+                      </span>
+                      <span
+                        onClick={() => setActiveTab('tournaments')}
+                        style={{ fontSize: '0.75rem', color: 'gold', fontWeight: 700, cursor: 'pointer' }}
+                      >
+                        Tất cả giải đấu →
+                      </span>
+                    </div>
+
+                    {activeTournaments.map(t => (
+                      <motion.div
+                        key={t.id}
+                        whileHover={{ y: -3, scale: 1.01 }}
+                        whileTap={{ scale: 0.99 }}
+                        onClick={() => handleOpenTournament(t.id)}
+                        className="glass-card"
+                        style={{
+                          padding: '16px 20px',
+                          borderRadius: '18px',
+                          cursor: 'pointer',
+                          background: 'linear-gradient(135deg, rgba(0, 242, 255, 0.12), rgba(234, 179, 8, 0.08))',
+                          border: '1.5px solid rgba(0, 242, 255, 0.3)',
+                          boxShadow: '0 8px 30px rgba(0, 242, 255, 0.08)',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          flexWrap: 'wrap',
+                          gap: '12px'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                          <div style={{ padding: '10px', background: 'rgba(234, 179, 8, 0.18)', borderRadius: '14px', flexShrink: 0 }}>
+                            <Trophy color="gold" size={22} />
+                          </div>
+                          <div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                              <span style={{
+                                background: 'rgba(16, 185, 129, 0.2)',
+                                color: 'var(--success)',
+                                border: '1px solid rgba(16, 185, 129, 0.4)',
+                                padding: '2px 7px',
+                                borderRadius: '6px',
+                                fontSize: '0.65rem',
+                                fontWeight: 800,
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px'
+                              }}>
+                                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981', display: 'inline-block' }} />
+                                ĐANG DIỄN RA
+                              </span>
+                              <span style={{ color: 'var(--text-dim)', fontSize: '0.72rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                <Calendar size={12} /> {new Date(t.start_date).toLocaleDateString('vi-VN')}
+                              </span>
+                            </div>
+                            <h3 className="heading-font" style={{ fontSize: '1.15rem', color: 'white', margin: 0, fontWeight: 900 }}>
+                              {t.name}
+                            </h3>
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'gold', fontWeight: 800, fontSize: '0.85rem' }}>
+                          Vào trang giải đấu <ArrowRight size={16} />
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                )}
+
+                <div style={{ marginTop: '0.5rem' }}>
                   <PlayerForm onSuccess={() => setActiveTab('leaderboard')} />
                 </div>
               </div>
@@ -186,7 +275,10 @@ function App() {
             )}
 
             {activeTab === 'tournaments' && (
-              <Tournaments />
+              <Tournaments
+                initialTournamentId={selectedTournamentId}
+                onClearInitialTournament={() => setSelectedTournamentId(null)}
+              />
             )}
           </motion.div>
         </AnimatePresence>
@@ -268,6 +360,18 @@ function App() {
         .desktop-nav { display: flex; }
         .mobile-nav-container { display: none; }
 
+        .stats-dashboard-grid {
+          display: grid;
+          grid-template-columns: 2fr 1fr;
+          gap: 14px;
+        }
+
+        .stats-cards-pair {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 14px;
+        }
+
         @media (max-width: 768px) {
           .desktop-nav { display: none !important; }
           .mobile-nav-container { 
@@ -286,6 +390,38 @@ function App() {
             padding-left: 12px !important;
             padding-right: 12px !important;
           }
+
+          .stats-dashboard-grid {
+            grid-template-columns: 1fr !important;
+            gap: 10px !important;
+          }
+
+          .stats-cards-pair {
+            grid-template-columns: 1fr 1fr !important;
+            gap: 10px !important;
+          }
+
+          .stat-card-inner {
+            padding: 10px 12px !important;
+          }
+
+          .stat-label {
+            font-size: 0.65rem !important;
+            margin-bottom: 2px !important;
+          }
+
+          .stat-value {
+            font-size: 1.35rem !important;
+          }
+
+          .stat-sub {
+            font-size: 0.62rem !important;
+            margin-top: 2px !important;
+          }
+
+          .telegram-card {
+            padding: 10px 14px !important;
+          }
         }
 
         @media (max-width: 380px) {
@@ -295,11 +431,13 @@ function App() {
           .nav-icon-wrapper {
             padding: 6px !important;
           }
+          .stat-value {
+            font-size: 1.2rem !important;
+          }
         }
       `}</style>
       <Analytics />
     </div>
-
   );
 }
 

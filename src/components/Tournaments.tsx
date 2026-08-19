@@ -2,11 +2,16 @@ import React, { useState, useEffect, useRef } from 'react';
 import { tournamentService, playerService, scheduleService, DEFAULT_TEAM_ROSTERS } from '../services/api';
 
 import type { Tournament, TournamentPlayerStats, TournamentFormat, TournamentFixture, TournamentStandingsRow, Player, TeamMinigameStats, MatchSchedule } from '../types';
-import { Trophy, Plus, Calendar, CheckCircle2, Circle, X, Medal, ArrowRight, GitBranch, Repeat, Check, Users, BookOpen, ShieldAlert, Award, ChevronLeft, ClipboardList, Pencil, Trash2 } from 'lucide-react';
+import { Trophy, Plus, Calendar, CheckCircle2, Circle, X, Medal, ArrowRight, GitBranch, Repeat, Check, Users, BookOpen, ShieldAlert, Award, ChevronLeft, ClipboardList, Pencil, Trash2, RotateCcw } from 'lucide-react';
 
 import { motion, AnimatePresence } from 'framer-motion';
 
-export const Tournaments: React.FC = () => {
+interface TournamentsProps {
+    initialTournamentId?: string | null;
+    onClearInitialTournament?: () => void;
+}
+
+export const Tournaments: React.FC<TournamentsProps> = ({ initialTournamentId, onClearInitialTournament }) => {
     const [tournaments, setTournaments] = useState<Tournament[]>([]);
     const [players, setPlayers] = useState<Player[]>([]);
     const [loading, setLoading] = useState(true);
@@ -20,7 +25,8 @@ export const Tournaments: React.FC = () => {
     // Detail View State (replaces modal)
     const [selectedTournament, setSelectedTournament] = useState<Tournament | null>(null);
     const [activeTab, setActiveTab] = useState<'leaderboard' | 'bracket'>('leaderboard');
-    const [teamTab, setTeamTab] = useState<'standings' | 'rosters' | 'schedule' | 'rules' | 'individual'>('standings');
+    const [teamTab, setTeamTab] = useState<'standings' | 'schedule' | 'individual' | 'rosters' | 'rules'>('standings');
+    const [standingsSubtab, setStandingsSubtab] = useState<'cumulative' | 1 | 2 | 3>('cumulative');
     const [selectedWeek, setSelectedWeek] = useState<number>(1);
 
     const [tLeaderboard, setTLeaderboard] = useState<TournamentPlayerStats[]>([]);
@@ -32,6 +38,12 @@ export const Tournaments: React.FC = () => {
 
     // Match Schedules (pre-scheduled fixtures)
     const [matchSchedules, setMatchSchedules] = useState<MatchSchedule[]>([]);
+
+    // Delete Schedule Confirmation Modal State
+    const [scheduleToDelete, setScheduleToDelete] = useState<string | null>(null);
+    const [schedAdminCode, setSchedAdminCode] = useState<string>('');
+    const [schedAdminError, setSchedAdminError] = useState<boolean>(false);
+    const [isDeletingSchedule, setIsDeletingSchedule] = useState<boolean>(false);
 
     // Add Fixture Form State
     const [showAddFixture, setShowAddFixture] = useState(false);
@@ -73,11 +85,21 @@ export const Tournaments: React.FC = () => {
         playerService.getAllPlayers().then(setPlayers).catch(console.error);
     }, []);
 
+    // Handle initialTournamentId navigation from outside (e.g. Dashboard)
+    useEffect(() => {
+        if (initialTournamentId && tournaments.length > 0) {
+            const found = tournaments.find(t => t.id === initialTournamentId);
+            if (found) {
+                handleSelectTournament(found);
+                if (onClearInitialTournament) onClearInitialTournament();
+            }
+        }
+    }, [initialTournamentId, tournaments]);
+
     // Scroll to top of detail view when tournament changes
     useEffect(() => {
         if (selectedTournament && detailRef.current) {
             detailRef.current.scrollTop = 0;
-            // Also scroll window to top of the section
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
     }, [selectedTournament]);
@@ -95,6 +117,7 @@ export const Tournaments: React.FC = () => {
         setSelectedTournament(activeT);
         if (format === 'team_minigame') {
             setTeamTab('standings');
+            setStandingsSubtab('cumulative');
         } else {
             setActiveTab(format !== 'elo_only' ? 'bracket' : 'leaderboard');
         }
@@ -134,6 +157,22 @@ export const Tournaments: React.FC = () => {
         setRrStandings([]);
         setMatchSchedules([]);
         setShowAddFixture(false);
+    };
+
+    const handleToggleTournamentStatus = async () => {
+        if (!selectedTournament) return;
+        const newStatus: 'active' | 'completed' = selectedTournament.status === 'active' ? 'completed' : 'active';
+        const actionLabel = newStatus === 'completed' ? 'KẾT THÚC' : 'MỞ LẠI';
+        if (!confirm(`Bạn có chắc chắn muốn ${actionLabel} giải đấu "${selectedTournament.name}" không?`)) return;
+
+        try {
+            await tournamentService.updateTournamentStatus(selectedTournament.id, newStatus);
+            setSelectedTournament(prev => prev ? { ...prev, status: newStatus } : null);
+            setTournaments(prev => prev.map(t => t.id === selectedTournament.id ? { ...t, status: newStatus } : t));
+        } catch (err) {
+            console.error(err);
+            alert(`Lỗi khi cập nhật trạng thái giải đấu.`);
+        }
     };
 
     const handleTogglePlayerEnrollment = (id: string) => {
@@ -184,12 +223,14 @@ export const Tournaments: React.FC = () => {
             );
             setMatchSchedules(prev => prev.map(s => s.id === updatedSchedule.id ? updatedSchedule : s));
             // Refresh standings
-            const [newMatches, newStandings] = await Promise.all([
+            const [newMatches, newStandings, newLeaderboard] = await Promise.all([
                 tournamentService.getTournamentMatches(selectedTournament.id),
                 tournamentService.getTeamMinigameStandings(selectedTournament.id),
+                tournamentService.getTournamentLeaderboard(selectedTournament.id)
             ]);
             setTMatches(newMatches);
             setTeamStandings(newStandings);
+            setTLeaderboard(newLeaderboard);
             setActiveSchedule(null);
             setSchedScore1('');
             setSchedScore2('');
@@ -201,14 +242,30 @@ export const Tournaments: React.FC = () => {
         }
     };
 
-    const handleDeleteSchedule = async (id: string) => {
-        if (!confirm('Xóa trận này khỏi lịch?')) return;
+    const handleOpenDeleteScheduleModal = (id: string) => {
+        setScheduleToDelete(id);
+        setSchedAdminCode('');
+        setSchedAdminError(false);
+    };
+
+    const handleConfirmDeleteSchedule = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!scheduleToDelete) return;
+        if (schedAdminCode.trim().toLowerCase() !== 'admin') {
+            setSchedAdminError(true);
+            return;
+        }
+
+        setIsDeletingSchedule(true);
         try {
-            await scheduleService.deleteSchedule(id);
-            setMatchSchedules(prev => prev.filter(s => s.id !== id));
+            await scheduleService.deleteSchedule(scheduleToDelete);
+            setMatchSchedules(prev => prev.filter(s => s.id !== scheduleToDelete));
+            setScheduleToDelete(null);
         } catch (err) {
             console.error(err);
             alert('Lỗi khi xóa lịch trận.');
+        } finally {
+            setIsDeletingSchedule(false);
         }
     };
 
@@ -279,13 +336,13 @@ export const Tournaments: React.FC = () => {
     const getFormatBadge = (format?: TournamentFormat) => {
         switch (format) {
             case 'team_minigame':
-                return <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'rgba(234, 179, 8, 0.15)', color: '#eab308', border: '1px solid rgba(234, 179, 8, 0.4)', padding: '2px 8px', borderRadius: '8px', fontSize: '0.7rem', fontWeight: 800 }}><Users size={12} /> MINIGAME ĐỒNG ĐỘI</span>;
+                return <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'rgba(234, 179, 8, 0.15)', color: '#eab308', border: '1px solid rgba(234, 179, 8, 0.4)', padding: '2px 8px', borderRadius: '8px', fontSize: '0.7rem', fontWeight: 800 }}><Users size={12} /> Minigame Đồng Đội</span>;
             case 'round_robin':
-                return <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'rgba(0, 242, 255, 0.1)', color: 'var(--primary-neon)', border: '1px solid rgba(0, 242, 255, 0.3)', padding: '2px 8px', borderRadius: '8px', fontSize: '0.7rem', fontWeight: 800 }}><Repeat size={12} /> VÒNG TRÒN</span>;
+                return <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'rgba(0, 242, 255, 0.1)', color: 'var(--primary-neon)', border: '1px solid rgba(0, 242, 255, 0.3)', padding: '2px 8px', borderRadius: '8px', fontSize: '0.7rem', fontWeight: 800 }}><Repeat size={12} /> Vòng Tròn</span>;
             case 'knockout':
-                return <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'rgba(189, 0, 255, 0.1)', color: 'var(--secondary-neon)', border: '1px solid rgba(189, 0, 255, 0.3)', padding: '2px 8px', borderRadius: '8px', fontSize: '0.7rem', fontWeight: 800 }}><GitBranch size={12} /> LOẠI TRỰC TIẾP</span>;
+                return <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'rgba(189, 0, 255, 0.1)', color: 'var(--secondary-neon)', border: '1px solid rgba(189, 0, 255, 0.3)', padding: '2px 8px', borderRadius: '8px', fontSize: '0.7rem', fontWeight: 800 }}><GitBranch size={12} /> Loại Trực Tiếp</span>;
             default:
-                return <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'rgba(255, 215, 0, 0.1)', color: 'gold', border: '1px solid rgba(255, 215, 0, 0.3)', padding: '2px 8px', borderRadius: '8px', fontSize: '0.7rem', fontWeight: 800 }}><Trophy size={12} /> ELO CHÍNH</span>;
+                return <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'rgba(255, 215, 0, 0.1)', color: 'gold', border: '1px solid rgba(255, 215, 0, 0.3)', padding: '2px 8px', borderRadius: '8px', fontSize: '0.7rem', fontWeight: 800 }}><Trophy size={12} /> Elo Chính</span>;
         }
     };
 
@@ -440,7 +497,7 @@ export const Tournaments: React.FC = () => {
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
                                         <h3 style={{ fontWeight: 800, fontSize: '1rem', color: 'white' }}>✨ Tạo Giải Đấu Mới</h3>
                                         <button onClick={() => setShowAdd(false)} style={{ background: 'none', border: 'none', color: 'var(--text-dim)', cursor: 'pointer', padding: '4px' }}>
-                                            <X size={18} />
+                                             <X size={18} />
                                         </button>
                                     </div>
                                     <form onSubmit={handleCreate} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -601,71 +658,101 @@ export const Tournaments: React.FC = () => {
                             padding: '12px 0',
                             borderBottom: '1px solid rgba(255,255,255,0.07)',
                         }}>
-                            {/* Back button + title */}
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                <motion.button
-                                    whileTap={{ scale: 0.93 }}
-                                    onClick={handleBack}
-                                    style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '6px',
-                                        background: 'rgba(255,255,255,0.07)',
-                                        border: '1px solid rgba(255,255,255,0.12)',
-                                        color: 'white',
-                                        padding: '8px 14px',
-                                        borderRadius: '12px',
-                                        cursor: 'pointer',
-                                        fontWeight: 700,
-                                        fontSize: '0.82rem',
-                                        flexShrink: 0,
-                                        transition: 'background 0.2s'
-                                    }}
-                                >
-                                    <ChevronLeft size={16} />
-                                    <span className="back-btn-text">Danh sách</span>
-                                </motion.button>
-
-                                {/* Divider */}
-                                <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: '1rem' }}>/</span>
-
-                                {/* Tournament name + badge */}
+                            {/* Back button + title + status toggle */}
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flex: 1 }}>
-                                    <div style={{ padding: '6px', background: 'rgba(255,215,0,0.1)', borderRadius: '10px', flexShrink: 0 }}>
-                                        <Trophy color="gold" size={18} />
-                                    </div>
-                                    <div style={{ minWidth: 0 }}>
-                                        <div className="heading-font" style={{ fontWeight: 900, color: 'white', fontSize: '1rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                            {selectedTournament.name}
+                                    <motion.button
+                                        whileTap={{ scale: 0.93 }}
+                                        onClick={handleBack}
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '6px',
+                                            background: 'rgba(255,255,255,0.07)',
+                                            border: '1px solid rgba(255,255,255,0.12)',
+                                            color: 'white',
+                                            padding: '8px 14px',
+                                            borderRadius: '12px',
+                                            cursor: 'pointer',
+                                            fontWeight: 700,
+                                            fontSize: '0.82rem',
+                                            flexShrink: 0,
+                                            transition: 'background 0.2s'
+                                        }}
+                                    >
+                                        <ChevronLeft size={16} />
+                                        <span className="back-btn-text">Danh sách</span>
+                                    </motion.button>
+
+                                    {/* Divider */}
+                                    <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: '1rem' }}>/</span>
+
+                                    {/* Tournament name + badge */}
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+                                        <div style={{ padding: '6px', background: 'rgba(255,215,0,0.1)', borderRadius: '10px', flexShrink: 0 }}>
+                                            <Trophy color="gold" size={18} />
                                         </div>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
-                                            {getFormatBadge(selectedTournament.format)}
-                                            <span style={{ color: 'var(--text-dim)', fontSize: '0.7rem' }}>{new Date(selectedTournament.start_date).toLocaleDateString('vi-VN')}</span>
+                                        <div style={{ minWidth: 0 }}>
+                                            <div className="heading-font" style={{ fontWeight: 900, color: 'white', fontSize: '1rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                {selectedTournament.name}
+                                            </div>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
+                                                {getFormatBadge(selectedTournament.format)}
+                                                <span style={{ color: 'var(--text-dim)', fontSize: '0.7rem' }}>{new Date(selectedTournament.start_date).toLocaleDateString('vi-VN')}</span>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
 
-                                {/* Status pill */}
-                                <span style={{
-                                    padding: '4px 10px',
-                                    borderRadius: '10px',
-                                    fontSize: '0.62rem',
-                                    fontWeight: 800,
-                                    textTransform: 'uppercase',
-                                    letterSpacing: '0.08em',
-                                    color: selectedTournament.status === 'active' ? 'var(--primary-neon)' : 'var(--success)',
-                                    background: selectedTournament.status === 'active' ? 'rgba(0,242,255,0.08)' : 'rgba(16,185,129,0.08)',
-                                    border: `1px solid ${selectedTournament.status === 'active' ? 'rgba(0,242,255,0.25)' : 'rgba(16,185,129,0.25)'}`,
-                                    flexShrink: 0,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '4px'
-                                }}>
-                                    {selectedTournament.status === 'active'
-                                        ? <><Circle size={6} fill="var(--primary-neon)" color="var(--primary-neon)" /> ĐANG DIỄN RA</>
-                                        : <><CheckCircle2 size={12} /> KẾT THÚC</>
-                                    }
-                                </span>
+                                {/* Status & Toggle action */}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                                    <span style={{
+                                        padding: '4px 10px',
+                                        borderRadius: '10px',
+                                        fontSize: '0.65rem',
+                                        fontWeight: 800,
+                                        textTransform: 'uppercase',
+                                        letterSpacing: '0.08em',
+                                        color: selectedTournament.status === 'active' ? 'var(--primary-neon)' : 'var(--success)',
+                                        background: selectedTournament.status === 'active' ? 'rgba(0,242,255,0.08)' : 'rgba(16,185,129,0.08)',
+                                        border: `1px solid ${selectedTournament.status === 'active' ? 'rgba(0,242,255,0.25)' : 'rgba(16,185,129,0.25)'}`,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '4px'
+                                    }}>
+                                        {selectedTournament.status === 'active'
+                                            ? <><Circle size={6} fill="var(--primary-neon)" color="var(--primary-neon)" /> ĐANG DIỄN RA</>
+                                            : <><CheckCircle2 size={12} /> KẾT THÚC</>
+                                        }
+                                    </span>
+
+                                    {/* Action button to finish / reopen tournament */}
+                                    <motion.button
+                                        whileTap={{ scale: 0.94 }}
+                                        onClick={handleToggleTournamentStatus}
+                                        title={selectedTournament.status === 'active' ? 'Chuyển sang trạng thái kết thúc giải' : 'Mở lại giải đấu'}
+                                        style={{
+                                            padding: '6px 12px',
+                                            borderRadius: '10px',
+                                            fontSize: '0.72rem',
+                                            fontWeight: 800,
+                                            cursor: 'pointer',
+                                            border: selectedTournament.status === 'active' ? '1px solid rgba(239, 68, 68, 0.4)' : '1px solid rgba(16, 185, 129, 0.4)',
+                                            background: selectedTournament.status === 'active' ? 'rgba(239, 68, 68, 0.12)' : 'rgba(16, 185, 129, 0.12)',
+                                            color: selectedTournament.status === 'active' ? '#f87171' : '#34d399',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '5px',
+                                            transition: 'all 0.2s ease'
+                                        }}
+                                    >
+                                        {selectedTournament.status === 'active' ? (
+                                            <>🏁 Kết thúc giải</>
+                                        ) : (
+                                            <><RotateCcw size={12} /> Mở lại giải</>
+                                        )}
+                                    </motion.button>
+                                </div>
                             </div>
                         </div>
 
@@ -673,7 +760,7 @@ export const Tournaments: React.FC = () => {
                         {selectedTournament.format === 'team_minigame' ? (
                             /* ════ TEAM MINIGAME FORMAT ════ */
                             <div>
-                                {/* Subtabs — sticky below breadcrumb */}
+                                {/* Subtabs — reordered with Rosters and Rules at the end */}
                                 <div style={{
                                     position: 'sticky',
                                     top: '73px',
@@ -687,10 +774,10 @@ export const Tournaments: React.FC = () => {
                                     <div className="no-scrollbar" style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '2px' }}>
                                         {[
                                             { id: 'standings', label: 'BXH Đồng Đội', emoji: '🏆', icon: Award },
-                                            { id: 'rosters', label: 'Danh Sách Đội', emoji: '👥', icon: Users },
                                             { id: 'schedule', label: 'Lịch & Kết Quả', emoji: '📅', icon: Calendar },
-                                            { id: 'rules', label: 'Thể Lệ', emoji: '📜', icon: BookOpen },
                                             { id: 'individual', label: 'Elo Cá Nhân', emoji: '⭐', icon: Trophy },
+                                            { id: 'rosters', label: 'Danh Sách Đội', emoji: '👥', icon: Users },
+                                            { id: 'rules', label: 'Thể Lệ', emoji: '📜', icon: BookOpen },
                                         ].map(tab => {
                                             const isActive = teamTab === tab.id;
                                             return (
@@ -735,104 +822,215 @@ export const Tournaments: React.FC = () => {
                                             exit={{ opacity: 0, y: -6 }}
                                             transition={{ duration: 0.2 }}
                                         >
-                                            {/* TEAM STANDINGS */}
+                                            {/* TEAM STANDINGS (with subtab switcher: Total vs Week 1, 2, 3) */}
                                             {teamTab === 'standings' && (
                                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                                                    {/* Leader Banner */}
-                                                    {teamStandings.length > 0 && (
-                                                        <motion.div
-                                                            initial={{ opacity: 0, scale: 0.97 }}
-                                                            animate={{ opacity: 1, scale: 1 }}
-                                                            style={{ background: 'linear-gradient(135deg, rgba(234,179,8,0.18), rgba(249,115,22,0.06))', padding: '18px 20px', borderRadius: '18px', border: '1px solid rgba(234,179,8,0.35)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}
-                                                        >
-                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                                                                <Trophy size={36} color="#eab308" fill="#eab308" />
-                                                                <div>
-                                                                    <div style={{ fontSize: '0.7rem', color: '#eab308', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em' }}>ĐẦU BẢNG LŨY KẾ</div>
-                                                                    <div style={{ fontSize: '1.5rem', fontWeight: 900, color: 'white' }}>{teamStandings[0].teamName}</div>
-                                                                </div>
-                                                            </div>
-                                                            <div style={{ textAlign: 'right' }}>
-                                                                <div style={{ fontSize: '2rem', fontWeight: 900, color: '#eab308', fontFamily: 'var(--font-heading)' }}>
-                                                                    {teamStandings[0].totalPoints} <span style={{ fontSize: '0.9rem' }}>ĐIỂM</span>
-                                                                </div>
-                                                                <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>{teamStandings[0].wins} trận thắng · +{teamStandings[0].weeklyBonus}đ thưởng tuần</div>
-                                                            </div>
-                                                        </motion.div>
-                                                    )}
 
-                                                    <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: 'white' }}>Bảng Xếp Hạng Đồng Đội Lũy Kế</h3>
-
-                                                    <div style={{ overflowX: 'auto', background: '#161928', borderRadius: '16px', border: '1px solid var(--glass-border)' }}>
-                                                        <table className="standings-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.82rem', minWidth: '460px' }}>
-                                                            <thead>
-                                                                <tr style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--text-dim)', textTransform: 'uppercase', fontSize: '0.68rem', letterSpacing: '0.05em' }}>
-                                                                    <th style={{ padding: '12px 14px' }}>Hạng</th>
-                                                                    <th style={{ padding: '12px 14px' }}>Đội</th>
-                                                                    <th style={{ padding: '12px 14px', textAlign: 'center' }}>ST</th>
-                                                                    <th style={{ padding: '12px 14px', textAlign: 'center' }}>Thắng</th>
-                                                                    <th style={{ padding: '12px 14px', textAlign: 'center' }}>Hiệu Số</th>
-                                                                    <th style={{ padding: '12px 14px', textAlign: 'center', color: '#eab308' }}>+Thưởng Tuần</th>
-                                                                    <th style={{ padding: '12px 16px', textAlign: 'right', color: 'gold' }}>Tổng</th>
-                                                                </tr>
-                                                            </thead>
-                                                            <tbody>
-                                                                {teamStandings.map((ts, idx) => (
-                                                                    <tr key={ts.teamId} style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-                                                                        <td style={{ padding: '12px 14px', fontWeight: 800 }}>{getRankIcon(idx)}</td>
-                                                                        <td style={{ padding: '12px 14px' }}>
-                                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                                                {getTeamBadge(ts.teamId)}
-                                                                                <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>({ts.members.length} VĐV)</span>
-                                                                            </div>
-                                                                        </td>
-                                                                        <td style={{ padding: '12px 14px', textAlign: 'center', fontWeight: 600 }}>{ts.played}</td>
-                                                                        <td style={{ padding: '12px 14px', textAlign: 'center', fontWeight: 700, color: 'var(--success)' }}>{ts.wins}</td>
-                                                                        <td style={{ padding: '12px 14px', textAlign: 'center', fontWeight: 700, color: ts.scoreDiff >= 0 ? 'var(--primary-neon)' : '#ef4444' }}>
-                                                                            {ts.scoreDiff > 0 ? `+${ts.scoreDiff}` : ts.scoreDiff}
-                                                                        </td>
-                                                                        <td style={{ padding: '12px 14px', textAlign: 'center', fontWeight: 800, color: '#eab308' }}>+{ts.weeklyBonus}đ</td>
-                                                                        <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 900, fontSize: '1.25rem', color: 'gold', fontFamily: 'var(--font-heading)' }}>{ts.totalPoints}</td>
-                                                                    </tr>
-                                                                ))}
-                                                            </tbody>
-                                                        </table>
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            {/* TEAM ROSTERS */}
-                                            {teamTab === 'rosters' && (
-                                                <div>
-                                                    <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: 'white', marginBottom: '14px' }}>Danh Sách 4 Đội Tham Dự</h3>
-                                                    <div className="team-roster-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '14px' }}>
-                                                        {Object.values(DEFAULT_TEAM_ROSTERS).map(roster => {
-                                                            const tStat = teamStandings.find(s => s.teamId === roster.id);
+                                                    {/* Sub-tab segmented switcher: [🌟 Tổng Lũy Kế] [📅 Tuần 1] [📅 Tuần 2] [📅 Tuần 3] */}
+                                                    <div style={{ display: 'flex', gap: '8px', background: '#121522', padding: '6px', borderRadius: '14px', border: '1px solid var(--glass-border)', overflowX: 'auto' }} className="no-scrollbar">
+                                                        {[
+                                                            { id: 'cumulative', label: '🌟 Tổng Lũy Kế' },
+                                                            { id: 1, label: '📅 Tuần 1' },
+                                                            { id: 2, label: '📅 Tuần 2' },
+                                                            { id: 3, label: '📅 Tuần 3' },
+                                                        ].map(st => {
+                                                            const isCur = standingsSubtab === st.id;
                                                             return (
-                                                                <motion.div
-                                                                    key={roster.id}
-                                                                    initial={{ opacity: 0, y: 10 }}
-                                                                    animate={{ opacity: 1, y: 0 }}
-                                                                    style={{ background: '#161928', borderRadius: '16px', border: `1.5px solid ${roster.color}40`, overflow: 'hidden' }}
+                                                                <button
+                                                                    key={st.id}
+                                                                    onClick={() => setStandingsSubtab(st.id as any)}
+                                                                    style={{
+                                                                        flex: 1,
+                                                                        padding: '8px 14px',
+                                                                        borderRadius: '10px',
+                                                                        border: 'none',
+                                                                        background: isCur ? 'rgba(0, 242, 255, 0.15)' : 'transparent',
+                                                                        color: isCur ? 'var(--primary-neon)' : 'var(--text-dim)',
+                                                                        fontWeight: 800,
+                                                                        fontSize: '0.78rem',
+                                                                        cursor: 'pointer',
+                                                                        whiteSpace: 'nowrap',
+                                                                        transition: 'all 0.18s ease',
+                                                                        boxShadow: isCur ? '0 2px 8px rgba(0,242,255,0.1)' : 'none'
+                                                                    }}
                                                                 >
-                                                                    <div style={{ background: roster.color, color: '#000', fontWeight: 900, fontSize: '1rem', textAlign: 'center', padding: '10px', letterSpacing: '0.05em' }}>
-                                                                        {roster.name.toUpperCase()}
-                                                                    </div>
-                                                                    <div style={{ padding: '14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                                                        {tStat?.members.map(m => (
-                                                                            <div key={m.id} style={{ fontSize: '0.82rem', fontWeight: 600, color: 'white', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                                                <span style={{ color: roster.color }}>•</span> {m.name}
-                                                                            </div>
-                                                                        ))}
-                                                                    </div>
-                                                                </motion.div>
+                                                                    {st.label}
+                                                                </button>
                                                             );
                                                         })}
                                                     </div>
+
+                                                    {/* CUMULATIVE STANDINGS VIEW */}
+                                                    {standingsSubtab === 'cumulative' && (
+                                                        <>
+                                                            {/* Leader Banner */}
+                                                            {teamStandings.length > 0 && (
+                                                                <motion.div
+                                                                    initial={{ opacity: 0, scale: 0.97 }}
+                                                                    animate={{ opacity: 1, scale: 1 }}
+                                                                    style={{ background: 'linear-gradient(135deg, rgba(234,179,8,0.18), rgba(249,115,22,0.06))', padding: '18px 20px', borderRadius: '18px', border: '1px solid rgba(234,179,8,0.35)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}
+                                                                >
+                                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                                                                        <Trophy size={36} color="#eab308" fill="#eab308" />
+                                                                        <div>
+                                                                            <div style={{ fontSize: '0.7rem', color: '#eab308', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Đầu Bảng Lũy Kế</div>
+                                                                            <div style={{ fontSize: '1.5rem', fontWeight: 900, color: 'white' }}>{teamStandings[0].teamName}</div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div style={{ textAlign: 'right' }}>
+                                                                        <div style={{ fontSize: '2rem', fontWeight: 900, color: '#eab308', fontFamily: 'var(--font-heading)' }}>
+                                                                            {teamStandings[0].totalPoints} <span style={{ fontSize: '0.9rem' }}>ĐIỂM</span>
+                                                                        </div>
+                                                                        <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>{teamStandings[0].wins} trận thắng · +{teamStandings[0].weeklyBonus}đ thưởng tuần</div>
+                                                                    </div>
+                                                                </motion.div>
+                                                            )}
+
+                                                            {/* Weekly Winners Recap Badges */}
+                                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px' }}>
+                                                                {[1, 2, 3].map(wNum => {
+                                                                    const winner = teamStandings.find(ts => ts.weeklyWins && ts.weeklyWins[wNum as 1|2|3] === 1);
+                                                                    return (
+                                                                        <div key={wNum} style={{ background: '#161928', padding: '10px 14px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                                                            <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)', fontWeight: 700 }}>Tuần {wNum}:</span>
+                                                                            {winner ? (
+                                                                                <span style={{ fontSize: '0.78rem', fontWeight: 800, color: 'gold', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                                                    🏆 {winner.teamName} <span style={{ color: '#10b981', fontSize: '0.7rem' }}>(+2đ)</span>
+                                                                                </span>
+                                                                            ) : (
+                                                                                <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>Chưa xác định</span>
+                                                                            )}
+                                                                        </div>
+                                                                    );
+                                                                })}
+                                                            </div>
+
+                                                            <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: 'white', margin: '4px 0 0 0' }}>Bảng Xếp Hạng Lũy Kế 3 Tuần</h3>
+
+                                                            <div style={{ overflowX: 'auto', background: '#161928', borderRadius: '16px', border: '1px solid var(--glass-border)' }}>
+                                                                <table className="standings-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.82rem', minWidth: '460px' }}>
+                                                                    <thead>
+                                                                        <tr style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--text-dim)', textTransform: 'uppercase', fontSize: '0.68rem', letterSpacing: '0.05em' }}>
+                                                                            <th style={{ padding: '12px 14px' }}>Hạng</th>
+                                                                            <th style={{ padding: '12px 14px' }}>Đội</th>
+                                                                            <th style={{ padding: '12px 14px', textAlign: 'center' }}>ST</th>
+                                                                            <th style={{ padding: '12px 14px', textAlign: 'center' }}>Thắng</th>
+                                                                            <th style={{ padding: '12px 14px', textAlign: 'center' }}>Hiệu Số</th>
+                                                                            <th style={{ padding: '12px 14px', textAlign: 'center', color: '#eab308' }}>+Thưởng Tuần</th>
+                                                                            <th style={{ padding: '12px 16px', textAlign: 'right', color: 'gold' }}>Tổng Điểm</th>
+                                                                        </tr>
+                                                                    </thead>
+                                                                    <tbody>
+                                                                        {teamStandings.map((ts, idx) => (
+                                                                            <tr key={ts.teamId} style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                                                                                <td style={{ padding: '12px 14px', fontWeight: 800 }}>{getRankIcon(idx)}</td>
+                                                                                <td style={{ padding: '12px 14px' }}>
+                                                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                                                        {getTeamBadge(ts.teamId)}
+                                                                                        <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>({ts.members.length} VĐV)</span>
+                                                                                    </div>
+                                                                                </td>
+                                                                                <td style={{ padding: '12px 14px', textAlign: 'center', fontWeight: 600 }}>{ts.played}</td>
+                                                                                <td style={{ padding: '12px 14px', textAlign: 'center', fontWeight: 700, color: 'var(--success)' }}>{ts.wins}</td>
+                                                                                <td style={{ padding: '12px 14px', textAlign: 'center', fontWeight: 700, color: ts.scoreDiff >= 0 ? 'var(--primary-neon)' : '#ef4444' }}>
+                                                                                    {ts.scoreDiff > 0 ? `+${ts.scoreDiff}` : ts.scoreDiff}
+                                                                                </td>
+                                                                                <td style={{ padding: '12px 14px', textAlign: 'center', fontWeight: 800, color: '#eab308' }}>+{ts.weeklyBonus}đ</td>
+                                                                                <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 900, fontSize: '1.25rem', color: 'gold', fontFamily: 'var(--font-heading)' }}>{ts.totalPoints}</td>
+                                                                            </tr>
+                                                                        ))}
+                                                                    </tbody>
+                                                                </table>
+                                                            </div>
+                                                        </>
+                                                    )}
+
+                                                    {/* SPECIFIC WEEK VIEW (Tuần 1, 2, 3) */}
+                                                    {typeof standingsSubtab === 'number' && (() => {
+                                                        const weekNum = standingsSubtab;
+                                                        const weekData = teamStandings.map(ts => {
+                                                            const wStat = ts.weeklyStats?.[weekNum] || { played: 0, wins: 0, losses: 0, ptsFor: 0, ptsAgainst: 0, scoreDiff: 0, isWeeklyWinner: false, bonus: 0 };
+                                                            return {
+                                                                ...ts,
+                                                                wStat
+                                                            };
+                                                        }).sort((a, b) => b.wStat.wins - a.wStat.wins || b.wStat.scoreDiff - a.wStat.scoreDiff || b.wStat.ptsFor - a.wStat.ptsFor);
+
+                                                        const topWeekTeam = weekData.find(w => w.wStat.isWeeklyWinner);
+                                                        const hasWeekMatches = weekData.some(w => w.wStat.played > 0);
+
+                                                        return (
+                                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                                                                {/* Winner of the week card */}
+                                                                {topWeekTeam && topWeekTeam.wStat.played > 0 && (
+                                                                    <div style={{ background: 'linear-gradient(135deg, rgba(234,179,8,0.15), rgba(16,185,129,0.08))', border: '1px solid rgba(234,179,8,0.3)', borderRadius: '16px', padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
+                                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                                            <Trophy size={28} color="gold" fill="gold" />
+                                                                            <div>
+                                                                                <div style={{ fontSize: '0.68rem', color: 'gold', fontWeight: 800, textTransform: 'uppercase' }}>Đội Nhất Tuần {weekNum}</div>
+                                                                                <div style={{ fontSize: '1.2rem', fontWeight: 900, color: 'white' }}>{topWeekTeam.teamName}</div>
+                                                                            </div>
+                                                                        </div>
+                                                                        <div style={{ background: 'rgba(234,179,8,0.2)', color: 'gold', padding: '6px 14px', borderRadius: '10px', fontWeight: 900, fontSize: '0.9rem' }}>
+                                                                            +2 Điểm Thưởng Lũy Kế
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+
+                                                                <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: 'white', margin: '4px 0 0 0' }}>
+                                                                    Bảng Thành Tích Tuần {weekNum}
+                                                                </h3>
+
+                                                                {!hasWeekMatches ? (
+                                                                    <div style={{ padding: '36px', textAlign: 'center', color: 'var(--text-dim)', background: 'rgba(255,255,255,0.02)', borderRadius: '16px', fontSize: '0.85rem', border: '1px dashed rgba(255,255,255,0.08)' }}>
+                                                                        ⏳ Chưa có trận đấu nào được ghi nhận cho Tuần {weekNum}.
+                                                                    </div>
+                                                                ) : (
+                                                                    <div style={{ overflowX: 'auto', background: '#161928', borderRadius: '16px', border: '1px solid var(--glass-border)' }}>
+                                                                        <table className="standings-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.82rem', minWidth: '460px' }}>
+                                                                            <thead>
+                                                                                <tr style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--text-dim)', textTransform: 'uppercase', fontSize: '0.68rem', letterSpacing: '0.05em' }}>
+                                                                                    <th style={{ padding: '12px 14px' }}>Hạng</th>
+                                                                                    <th style={{ padding: '12px 14px' }}>Đội</th>
+                                                                                    <th style={{ padding: '12px 14px', textAlign: 'center' }}>ST</th>
+                                                                                    <th style={{ padding: '12px 14px', textAlign: 'center' }}>Thắng</th>
+                                                                                    <th style={{ padding: '12px 14px', textAlign: 'center' }}>Thua</th>
+                                                                                    <th style={{ padding: '12px 14px', textAlign: 'center' }}>Hiệu Số</th>
+                                                                                    <th style={{ padding: '12px 16px', textAlign: 'right', color: '#eab308' }}>Thưởng Tuần</th>
+                                                                                </tr>
+                                                                            </thead>
+                                                                            <tbody>
+                                                                                {weekData.map((wRow, idx) => (
+                                                                                    <tr key={wRow.teamId} style={{ borderTop: '1px solid rgba(255,255,255,0.05)', background: wRow.wStat.isWeeklyWinner ? 'rgba(234,179,8,0.05)' : 'transparent' }}>
+                                                                                        <td style={{ padding: '12px 14px', fontWeight: 800 }}>{getRankIcon(idx)}</td>
+                                                                                        <td style={{ padding: '12px 14px' }}>
+                                                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                                                                {getTeamBadge(wRow.teamId)}
+                                                                                                {wRow.wStat.isWeeklyWinner && <span style={{ fontSize: '0.7rem', color: 'gold', fontWeight: 800 }}>🏆 Nhất Tuần</span>}
+                                                                                            </div>
+                                                                                        </td>
+                                                                                        <td style={{ padding: '12px 14px', textAlign: 'center', fontWeight: 600 }}>{wRow.wStat.played}</td>
+                                                                                        <td style={{ padding: '12px 14px', textAlign: 'center', fontWeight: 700, color: 'var(--success)' }}>{wRow.wStat.wins}</td>
+                                                                                        <td style={{ padding: '12px 14px', textAlign: 'center', fontWeight: 600, color: 'var(--text-dim)' }}>{wRow.wStat.losses}</td>
+                                                                                        <td style={{ padding: '12px 14px', textAlign: 'center', fontWeight: 700, color: wRow.wStat.scoreDiff >= 0 ? 'var(--primary-neon)' : '#ef4444' }}>
+                                                                                            {wRow.wStat.scoreDiff > 0 ? `+${wRow.wStat.scoreDiff}` : wRow.wStat.scoreDiff}
+                                                                                        </td>
+                                                                                        <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 900, color: wRow.wStat.isWeeklyWinner ? 'gold' : 'var(--text-dim)' }}>
+                                                                                            {wRow.wStat.isWeeklyWinner ? '+2đ' : '0đ'}
+                                                                                        </td>
+                                                                                    </tr>
+                                                                                ))}
+                                                                            </tbody>
+                                                                        </table>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    })()}
                                                 </div>
                                             )}
 
-                                            {/* WEEKLY SCHEDULE */}
+                                            {/* WEEKLY SCHEDULE & RESULTS */}
                                             {teamTab === 'schedule' && (() => {
                                                 const weekSchedules = matchSchedules.filter(s => s.week === selectedWeek);
                                                 const courtGroups: Record<string, MatchSchedule[]> = {};
@@ -1046,11 +1244,15 @@ export const Tournaments: React.FC = () => {
                                                                             <span style={{ fontWeight: 800, fontSize: '0.88rem', color: 'white' }}>{court}</span>
                                                                             <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)' }}>{matches.length} trận đấu</span>
                                                                         </div>
-                                                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '10px' }}>
+                                                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '12px' }}>
                                                                             {matches.map((s, idx) => {
                                                                                 const t1 = getTeamForPlayer(s.team1_player1_id) || getTeamForPlayer(s.team1_player2_id);
                                                                                 const t2 = getTeamForPlayer(s.team2_player1_id) || getTeamForPlayer(s.team2_player2_id);
                                                                                 const isPending = s.status === 'pending';
+                                                                                const m = tMatches.find(tm => tm.id === s.match_id);
+                                                                                const hasScore = !isPending && m && m.team1_score !== undefined && m.team2_score !== undefined;
+                                                                                const team1Won = hasScore && m.team1_score > m.team2_score;
+                                                                                const team2Won = hasScore && m.team2_score > m.team1_score;
 
                                                                                 return (
                                                                                     <motion.div
@@ -1059,11 +1261,11 @@ export const Tournaments: React.FC = () => {
                                                                                         animate={{ opacity: 1, y: 0 }}
                                                                                         transition={{ delay: idx * 0.03 }}
                                                                                         style={{
-                                                                                            padding: '12px 14px',
-                                                                                            borderRadius: '14px',
+                                                                                            padding: '14px 16px',
+                                                                                            borderRadius: '16px',
                                                                                             background: isPending ? '#12151f' : '#171a2b',
-                                                                                            border: isPending ? '1px solid rgba(249,115,22,0.25)' : '1px solid rgba(16,185,129,0.25)',
-                                                                                            display: 'flex', flexDirection: 'column', gap: '8px',
+                                                                                            border: isPending ? '1px solid rgba(249,115,22,0.25)' : '1px solid rgba(16,185,129,0.3)',
+                                                                                            display: 'flex', flexDirection: 'column', gap: '10px',
                                                                                             position: 'relative',
                                                                                         }}
                                                                                     >
@@ -1071,10 +1273,10 @@ export const Tournaments: React.FC = () => {
                                                                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.68rem' }}>
                                                                                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                                                                                 {s.matchup_label && (
-                                                                                                    <span style={{ fontWeight: 800, color: 'var(--text-dim)', background: 'rgba(255,255,255,0.06)', padding: '1px 6px', borderRadius: '5px' }}>{s.matchup_label}</span>
+                                                                                                    <span style={{ fontWeight: 800, color: 'var(--text-dim)', background: 'rgba(255,255,255,0.06)', padding: '2px 6px', borderRadius: '5px' }}>{s.matchup_label}</span>
                                                                                                 )}
                                                                                                 <span style={{ color: isPending ? '#f97316' : '#10b981', fontWeight: 800 }}>
-                                                                                                    {isPending ? '⏳ Chờ KQ' : '✓ Có KQ'}
+                                                                                                    {isPending ? '⏳ Chờ KQ' : '✓ Đã đấu'}
                                                                                                 </span>
                                                                                             </div>
                                                                                             <div style={{ display: 'flex', gap: '4px' }}>
@@ -1084,13 +1286,13 @@ export const Tournaments: React.FC = () => {
                                                                                                         title="Nhập kết quả"
                                                                                                         style={{ background: 'rgba(0,242,255,0.1)', border: '1px solid rgba(0,242,255,0.3)', color: 'var(--primary-neon)', borderRadius: '6px', padding: '3px 7px', cursor: 'pointer', fontWeight: 700, fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '3px' }}
                                                                                                     >
-                                                                                                        <Pencil size={10} /> KQ
+                                                                                                        <Pencil size={10} /> Nhập KQ
                                                                                                     </button>
                                                                                                 )}
                                                                                                 <button
-                                                                                                    onClick={() => handleDeleteSchedule(s.id)}
-                                                                                                    title="Xóa"
-                                                                                                    style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', color: '#ef4444', borderRadius: '6px', padding: '3px 5px', cursor: 'pointer' }}
+                                                                                                    onClick={() => handleOpenDeleteScheduleModal(s.id)}
+                                                                                                    title="Xóa trận khỏi lịch"
+                                                                                                    style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', color: '#ef4444', borderRadius: '6px', padding: '3px 6px', cursor: 'pointer' }}
                                                                                                 >
                                                                                                     <Trash2 size={10} />
                                                                                                 </button>
@@ -1099,49 +1301,82 @@ export const Tournaments: React.FC = () => {
 
                                                                                         {/* Team matchup badge */}
                                                                                         {t1 && t2 && (
-                                                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', justifyContent: 'center', paddingBottom: '4px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                                                                                                <span style={{ padding: '1px 7px', borderRadius: '5px', fontSize: '0.7rem', fontWeight: 800, background: t1.badgeBg, color: t1.color, border: `1px solid ${t1.color}40` }}>{t1.name}</span>
-                                                                                                <span style={{ fontSize: '0.6rem', color: 'var(--text-dim)', fontWeight: 800 }}>VS</span>
-                                                                                                <span style={{ padding: '1px 7px', borderRadius: '5px', fontSize: '0.7rem', fontWeight: 800, background: t2.badgeBg, color: t2.color, border: `1px solid ${t2.color}40` }}>{t2.name}</span>
+                                                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'center', paddingBottom: '6px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                                                                                <span style={{ padding: '2px 8px', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 800, background: t1.badgeBg, color: t1.color, border: `1px solid ${t1.color}40` }}>{t1.name}</span>
+                                                                                                <span style={{ fontSize: '0.62rem', color: 'var(--text-dim)', fontWeight: 800 }}>VS</span>
+                                                                                                <span style={{ padding: '2px 8px', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 800, background: t2.badgeBg, color: t2.color, border: `1px solid ${t2.color}40` }}>{t2.name}</span>
                                                                                             </div>
                                                                                         )}
 
-                                                                                        {/* Bên 1 */}
-                                                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.82rem' }}>
-                                                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
-                                                                                                {t1 && <span style={{ fontSize: '0.62rem', fontWeight: 900, color: t1.color, background: t1.badgeBg, padding: '1px 4px', borderRadius: '4px', flexShrink: 0 }}>{t1.id}</span>}
-                                                                                                <span style={{
-                                                                                                    fontWeight: !isPending && s.match_id ? 900 : 600,
-                                                                                                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                                                                                                    color: 'white',
+                                                                                        {/* Match Teams & Player Names (Side 1) */}
+                                                                                        <div style={{
+                                                                                            display: 'flex',
+                                                                                            justifyContent: 'space-between',
+                                                                                            alignItems: 'center',
+                                                                                            padding: '6px 8px',
+                                                                                            borderRadius: '8px',
+                                                                                            background: team1Won ? 'rgba(0, 242, 255, 0.08)' : 'transparent',
+                                                                                            border: team1Won ? '1px solid rgba(0, 242, 255, 0.25)' : '1px solid transparent'
+                                                                                        }}>
+                                                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
+                                                                                                {t1 && <span style={{ fontSize: '0.65rem', fontWeight: 900, color: t1.color, background: t1.badgeBg, padding: '2px 5px', borderRadius: '4px', flexShrink: 0 }}>{t1.id}</span>}
+                                                                                                <div style={{
+                                                                                                    fontWeight: team1Won ? 900 : (team2Won ? 500 : 700),
+                                                                                                    color: team1Won ? '#ffffff' : (team2Won ? 'rgba(255,255,255,0.5)' : '#ffffff'),
+                                                                                                    fontSize: '0.82rem',
+                                                                                                    lineHeight: 1.35
                                                                                                 }}>
                                                                                                     {s.p1?.name || '—'}{s.p1b?.name ? ` & ${s.p1b.name}` : ''}
-                                                                                                </span>
+                                                                                                </div>
                                                                                             </div>
+                                                                                            {hasScore && (
+                                                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                                                                                                    {team1Won && (
+                                                                                                        <span style={{ fontSize: '0.62rem', fontWeight: 900, background: 'rgba(16,185,129,0.2)', color: 'var(--success)', border: '1px solid rgba(16,185,129,0.4)', padding: '1px 5px', borderRadius: '4px' }}>
+                                                                                                            THẮNG
+                                                                                                        </span>
+                                                                                                    )}
+                                                                                                    <span style={{ fontFamily: 'var(--font-heading)', fontSize: '1.15rem', fontWeight: 900, color: team1Won ? 'gold' : 'var(--text-dim)', minWidth: '24px', textAlign: 'right' }}>
+                                                                                                        {m.team1_score}
+                                                                                                    </span>
+                                                                                                </div>
+                                                                                            )}
                                                                                         </div>
 
-                                                                                        {/* Bên 2 */}
-                                                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.82rem' }}>
-                                                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
-                                                                                                {t2 && <span style={{ fontSize: '0.62rem', fontWeight: 900, color: t2.color, background: t2.badgeBg, padding: '1px 4px', borderRadius: '4px', flexShrink: 0 }}>{t2.id}</span>}
-                                                                                                <span style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'white' }}>
+                                                                                        {/* Match Teams & Player Names (Side 2) */}
+                                                                                        <div style={{
+                                                                                            display: 'flex',
+                                                                                            justifyContent: 'space-between',
+                                                                                            alignItems: 'center',
+                                                                                            padding: '6px 8px',
+                                                                                            borderRadius: '8px',
+                                                                                            background: team2Won ? 'rgba(0, 242, 255, 0.08)' : 'transparent',
+                                                                                            border: team2Won ? '1px solid rgba(0, 242, 255, 0.25)' : '1px solid transparent'
+                                                                                        }}>
+                                                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
+                                                                                                {t2 && <span style={{ fontSize: '0.65rem', fontWeight: 900, color: t2.color, background: t2.badgeBg, padding: '2px 5px', borderRadius: '4px', flexShrink: 0 }}>{t2.id}</span>}
+                                                                                                <div style={{
+                                                                                                    fontWeight: team2Won ? 900 : (team1Won ? 500 : 700),
+                                                                                                    color: team2Won ? '#ffffff' : (team1Won ? 'rgba(255,255,255,0.5)' : '#ffffff'),
+                                                                                                    fontSize: '0.82rem',
+                                                                                                    lineHeight: 1.35
+                                                                                                }}>
                                                                                                     {s.p2?.name || '—'}{s.p2b?.name ? ` & ${s.p2b.name}` : ''}
-                                                                                                </span>
+                                                                                                </div>
                                                                                             </div>
+                                                                                            {hasScore && (
+                                                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                                                                                                    {team2Won && (
+                                                                                                        <span style={{ fontSize: '0.62rem', fontWeight: 900, background: 'rgba(16,185,129,0.2)', color: 'var(--success)', border: '1px solid rgba(16,185,129,0.4)', padding: '1px 5px', borderRadius: '4px' }}>
+                                                                                                            THẮNG
+                                                                                                        </span>
+                                                                                                    )}
+                                                                                                    <span style={{ fontFamily: 'var(--font-heading)', fontSize: '1.15rem', fontWeight: 900, color: team2Won ? 'gold' : 'var(--text-dim)', minWidth: '24px', textAlign: 'right' }}>
+                                                                                                        {m.team2_score}
+                                                                                                    </span>
+                                                                                                </div>
+                                                                                            )}
                                                                                         </div>
-
-                                                                                        {/* Score (if completed) */}
-                                                                                        {!isPending && (
-                                                                                            <div style={{ marginTop: '2px', textAlign: 'center', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '6px' }}>
-                                                                                                <span style={{ fontFamily: 'var(--font-heading)', fontSize: '1.1rem', fontWeight: 900, color: 'gold', letterSpacing: '0.1em' }}>
-                                                                                                    {/* Score shown via tMatches lookup */}
-                                                                                                    {(() => {
-                                                                                                        const m = tMatches.find(tm => tm.id === s.match_id);
-                                                                                                        return m ? `${m.team1_score} – ${m.team2_score}` : '— – —';
-                                                                                                    })()}
-                                                                                                </span>
-                                                                                            </div>
-                                                                                        )}
                                                                                     </motion.div>
                                                                                 );
                                                                             })}
@@ -1153,6 +1388,47 @@ export const Tournaments: React.FC = () => {
                                                     </div>
                                                 );
                                             })()}
+
+                                            {/* INDIVIDUAL ELO */}
+                                            {teamTab === 'individual' && (
+                                                <div>
+                                                    <h3 style={{ fontSize: '0.95rem', fontWeight: 800, marginBottom: '14px', color: 'white' }}>
+                                                        🏆 Bảng Xếp Hạng Elo Cá Nhân ({tLeaderboard.length} VĐV)
+                                                    </h3>
+                                                    <PlayerLeaderboardList players={tLeaderboard} />
+                                                </div>
+                                            )}
+
+                                            {/* TEAM ROSTERS */}
+                                            {teamTab === 'rosters' && (
+                                                <div>
+                                                    <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: 'white', marginBottom: '14px' }}>Danh Sách 4 Đội Tham Dự</h3>
+                                                    <div className="team-roster-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '14px' }}>
+                                                        {Object.values(DEFAULT_TEAM_ROSTERS).map(roster => {
+                                                            const tStat = teamStandings.find(s => s.teamId === roster.id);
+                                                            return (
+                                                                <motion.div
+                                                                    key={roster.id}
+                                                                    initial={{ opacity: 0, y: 10 }}
+                                                                    animate={{ opacity: 1, y: 0 }}
+                                                                    style={{ background: '#161928', borderRadius: '16px', border: `1.5px solid ${roster.color}40`, overflow: 'hidden' }}
+                                                                >
+                                                                    <div style={{ background: roster.color, color: '#000', fontWeight: 900, fontSize: '1rem', textAlign: 'center', padding: '10px', letterSpacing: '0.05em' }}>
+                                                                        {roster.name.toUpperCase()}
+                                                                    </div>
+                                                                    <div style={{ padding: '14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                                                        {tStat?.members.map(m => (
+                                                                            <div key={m.id} style={{ fontSize: '0.82rem', fontWeight: 600, color: 'white', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                                                <span style={{ color: roster.color }}>•</span> {m.name}
+                                                                            </div>
+                                                                        ))}
+                                                                    </div>
+                                                                </motion.div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            )}
 
                                             {/* RULES TAB */}
                                             {teamTab === 'rules' && (
@@ -1205,16 +1481,6 @@ export const Tournaments: React.FC = () => {
                                                             <li>Quyết định của Ban Tổ chức.</li>
                                                         </ol>
                                                     </div>
-                                                </div>
-                                            )}
-
-                                            {/* INDIVIDUAL ELO */}
-                                            {teamTab === 'individual' && (
-                                                <div>
-                                                    <h3 style={{ fontSize: '0.95rem', fontWeight: 800, marginBottom: '14px', color: 'white' }}>
-                                                        🏆 Bảng Xếp Hạng Elo Cá Nhân ({tLeaderboard.length} VĐV)
-                                                    </h3>
-                                                    <PlayerLeaderboardList players={tLeaderboard} />
                                                 </div>
                                             )}
                                         </motion.div>
@@ -1443,6 +1709,124 @@ export const Tournaments: React.FC = () => {
                                 <ChevronLeft size={16} /> Quay lại danh sách giải đấu
                             </motion.button>
                         </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* ── SCHEDULE DELETE ADMIN CONFIRMATION MODAL ─────────────────────── */}
+            <AnimatePresence>
+                {scheduleToDelete && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={() => setScheduleToDelete(null)}
+                        style={{
+                            position: 'fixed',
+                            inset: 0,
+                            zIndex: 10003,
+                            background: 'rgba(0,0,0,0.85)',
+                            backdropFilter: 'blur(12px)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            padding: '16px'
+                        }}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, y: 20 }}
+                            animate={{ scale: 1, y: 0 }}
+                            exit={{ scale: 0.9, y: 20 }}
+                            onClick={e => e.stopPropagation()}
+                            className="glass-card"
+                            style={{
+                                width: '100%',
+                                maxWidth: '380px',
+                                padding: '24px',
+                                borderRadius: '22px',
+                                border: '1px solid rgba(239, 68, 68, 0.4)',
+                                boxShadow: '0 20px 60px rgba(0,0,0,0.7)'
+                            }}
+                        >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#ef4444', fontWeight: 800, fontSize: '1.05rem' }}>
+                                    <ShieldAlert size={20} /> Xác nhận xóa trận khỏi lịch
+                                </div>
+                                <button onClick={() => setScheduleToDelete(null)} style={{ background: 'none', border: 'none', color: 'var(--text-dim)', cursor: 'pointer' }}>
+                                    <X size={18} />
+                                </button>
+                            </div>
+
+                            <p style={{ fontSize: '0.82rem', color: 'var(--text-dim)', lineHeight: 1.5, marginBottom: '14px' }}>
+                                Bạn đang thực hiện xóa trận đấu này khỏi lịch thi đấu của giải.
+                            </p>
+
+                            <form onSubmit={handleConfirmDeleteSchedule} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                                <div>
+                                    <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'white', display: 'block', marginBottom: '6px' }}>
+                                        Vui lòng nhập chữ <span style={{ color: '#ef4444', fontWeight: 900 }}>admin</span> để xác nhận:
+                                    </label>
+                                    <input
+                                        type="text"
+                                        autoFocus
+                                        value={schedAdminCode}
+                                        onChange={e => { setSchedAdminCode(e.target.value); setSchedAdminError(false); }}
+                                        placeholder="Nhập admin..."
+                                        style={{
+                                            width: '100%',
+                                            background: '#161928',
+                                            border: schedAdminError ? '1.5px solid #ef4444' : '1px solid rgba(255,255,255,0.15)',
+                                            borderRadius: '12px',
+                                            padding: '10px 14px',
+                                            color: 'white',
+                                            fontSize: '0.9rem'
+                                        }}
+                                    />
+                                    {schedAdminError && (
+                                        <div style={{ color: '#ef4444', fontSize: '0.72rem', marginTop: '4px', fontWeight: 600 }}>
+                                            Mã xác nhận không đúng (phải nhập chữ admin).
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
+                                    <button
+                                        type="button"
+                                        onClick={() => setScheduleToDelete(null)}
+                                        style={{
+                                            flex: 1,
+                                            padding: '10px',
+                                            background: 'rgba(255,255,255,0.06)',
+                                            border: '1px solid rgba(255,255,255,0.1)',
+                                            color: 'white',
+                                            borderRadius: '12px',
+                                            fontWeight: 700,
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        Hủy
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        disabled={schedAdminCode.trim().toLowerCase() !== 'admin' || isDeletingSchedule}
+                                        style={{
+                                            flex: 1,
+                                            padding: '10px',
+                                            background: schedAdminCode.trim().toLowerCase() === 'admin' ? '#ef4444' : 'rgba(239,68,68,0.2)',
+                                            border: 'none',
+                                            color: 'white',
+                                            borderRadius: '12px',
+                                            fontWeight: 800,
+                                            cursor: schedAdminCode.trim().toLowerCase() === 'admin' ? 'pointer' : 'not-allowed',
+                                            transition: 'all 0.2s ease',
+                                            opacity: isDeletingSchedule ? 0.6 : 1
+                                        }}
+                                    >
+                                        {isDeletingSchedule ? 'Đang xóa...' : 'Xóa vĩnh viễn'}
+                                    </button>
+                                </div>
+                            </form>
+                        </motion.div>
                     </motion.div>
                 )}
             </AnimatePresence>

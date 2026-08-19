@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { matchService, tournamentService } from '../services/api';
-import { Clock, TrendingUp, TrendingDown, Users, User, Trash2, Edit2, Trophy, Filter } from 'lucide-react';
+import { Clock, TrendingUp, TrendingDown, Users, User, Trash2, Edit2, Trophy, Filter, X, ShieldAlert } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Tournament } from '../types';
 
@@ -15,6 +15,11 @@ export const History: React.FC<HistoryProps> = ({ onEdit }) => {
     const [loading, setLoading] = useState(true);
     const [isDeleting, setIsDeleting] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
+
+    // Delete Confirmation Modal State
+    const [matchToDelete, setMatchToDelete] = useState<any | null>(null);
+    const [adminCodeInput, setAdminCodeInput] = useState<string>('');
+    const [adminError, setAdminError] = useState<boolean>(false);
 
     const fetchMatches = () => {
         Promise.all([
@@ -49,14 +54,26 @@ export const History: React.FC<HistoryProps> = ({ onEdit }) => {
         return matchesPlayer && matchesTournament;
     });
 
-    const handleDelete = async (matchId: string) => {
-        if (!window.confirm('Bạn có chắc muốn xoá trận đấu này? Điểm Elo sẽ được hoàn tác.')) return;
+    const handleOpenDeleteModal = (match: any) => {
+        setMatchToDelete(match);
+        setAdminCodeInput('');
+        setAdminError(false);
+    };
 
+    const handleConfirmDelete = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!matchToDelete) return;
+        if (adminCodeInput.trim().toLowerCase() !== 'admin') {
+            setAdminError(true);
+            return;
+        }
+
+        const matchId = matchToDelete.id;
         setIsDeleting(matchId);
         try {
             await matchService.deleteMatch(matchId);
+            setMatchToDelete(null);
             fetchMatches();
-            alert('Đã xoá trận đấu và cập nhật lại bảng xếp hạng.');
         } catch (err) {
             console.error(err);
             alert('Lỗi khi xoá trận đấu.');
@@ -73,7 +90,7 @@ export const History: React.FC<HistoryProps> = ({ onEdit }) => {
         if (diffInSeconds < 60) return 'Vừa xong';
         if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} phút trước`;
         if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} giờ trước`;
-        return date.toLocaleDateString();
+        return date.toLocaleDateString('vi-VN');
     };
 
     if (loading) return <div className="fade-in">Đang tải lịch sử...</div>;
@@ -209,7 +226,7 @@ export const History: React.FC<HistoryProps> = ({ onEdit }) => {
                                                 <Edit2 size={10} /> Sửa
                                             </button>
                                             <button
-                                                onClick={() => handleDelete(match.id)}
+                                                onClick={() => handleOpenDeleteModal(match)}
                                                 disabled={isDeleting !== null}
                                                 title="Xóa trận đấu"
                                                 style={{
@@ -301,6 +318,126 @@ export const History: React.FC<HistoryProps> = ({ onEdit }) => {
                 </AnimatePresence>
             </div>
 
+            {/* ── ADMIN DELETE CONFIRMATION MODAL ───────────────────────── */}
+            <AnimatePresence>
+                {matchToDelete && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={() => setMatchToDelete(null)}
+                        style={{
+                            position: 'fixed',
+                            inset: 0,
+                            zIndex: 10002,
+                            background: 'rgba(0,0,0,0.85)',
+                            backdropFilter: 'blur(12px)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            padding: '16px'
+                        }}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, y: 20 }}
+                            animate={{ scale: 1, y: 0 }}
+                            exit={{ scale: 0.9, y: 20 }}
+                            onClick={e => e.stopPropagation()}
+                            className="glass-card"
+                            style={{
+                                width: '100%',
+                                maxWidth: '380px',
+                                padding: '24px',
+                                borderRadius: '22px',
+                                border: '1px solid rgba(239, 68, 68, 0.4)',
+                                boxShadow: '0 20px 60px rgba(0,0,0,0.7)'
+                            }}
+                        >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#ef4444', fontWeight: 800, fontSize: '1.05rem' }}>
+                                    <ShieldAlert size={20} /> Xác nhận xóa trận đấu
+                                </div>
+                                <button onClick={() => setMatchToDelete(null)} style={{ background: 'none', border: 'none', color: 'var(--text-dim)', cursor: 'pointer' }}>
+                                    <X size={18} />
+                                </button>
+                            </div>
+
+                            <p style={{ fontSize: '0.82rem', color: 'var(--text-dim)', lineHeight: 1.5, marginBottom: '14px' }}>
+                                Trận đấu: <strong style={{ color: 'white' }}>{matchToDelete.p1?.name}{matchToDelete.p1b?.name ? ` & ${matchToDelete.p1b.name}` : ''} ({matchToDelete.team1_score}) vs ({matchToDelete.team2_score}) {matchToDelete.p2?.name}{matchToDelete.p2b?.name ? ` & ${matchToDelete.p2b.name}` : ''}</strong>
+                                <br />
+                                Xóa trận đấu sẽ hoàn tác điểm Elo đã cộng/trừ của các người chơi.
+                            </p>
+
+                            <form onSubmit={handleConfirmDelete} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                                <div>
+                                    <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'white', display: 'block', marginBottom: '6px' }}>
+                                        Vui lòng nhập chữ <span style={{ color: '#ef4444', fontWeight: 900 }}>admin</span> để xác nhận:
+                                    </label>
+                                    <input
+                                        type="text"
+                                        autoFocus
+                                        value={adminCodeInput}
+                                        onChange={e => { setAdminCodeInput(e.target.value); setAdminError(false); }}
+                                        placeholder="Nhập admin..."
+                                        style={{
+                                            width: '100%',
+                                            background: '#161928',
+                                            border: adminError ? '1.5px solid #ef4444' : '1px solid rgba(255,255,255,0.15)',
+                                            borderRadius: '12px',
+                                            padding: '10px 14px',
+                                            color: 'white',
+                                            fontSize: '0.9rem'
+                                        }}
+                                    />
+                                    {adminError && (
+                                        <div style={{ color: '#ef4444', fontSize: '0.72rem', marginTop: '4px', fontWeight: 600 }}>
+                                            Mã xác nhận không đúng (phải nhập chữ admin).
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
+                                    <button
+                                        type="button"
+                                        onClick={() => setMatchToDelete(null)}
+                                        style={{
+                                            flex: 1,
+                                            padding: '10px',
+                                            background: 'rgba(255,255,255,0.06)',
+                                            border: '1px solid rgba(255,255,255,0.1)',
+                                            color: 'white',
+                                            borderRadius: '12px',
+                                            fontWeight: 700,
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        Hủy
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        disabled={adminCodeInput.trim().toLowerCase() !== 'admin' || isDeleting !== null}
+                                        style={{
+                                            flex: 1,
+                                            padding: '10px',
+                                            background: adminCodeInput.trim().toLowerCase() === 'admin' ? '#ef4444' : 'rgba(239,68,68,0.2)',
+                                            border: 'none',
+                                            color: 'white',
+                                            borderRadius: '12px',
+                                            fontWeight: 800,
+                                            cursor: adminCodeInput.trim().toLowerCase() === 'admin' ? 'pointer' : 'not-allowed',
+                                            transition: 'all 0.2s ease',
+                                            opacity: isDeleting !== null ? 0.6 : 1
+                                        }}
+                                    >
+                                        {isDeleting !== null ? 'Đang xóa...' : 'Xóa vĩnh viễn'}
+                                    </button>
+                                </div>
+                            </form>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
             <style>{`
         .history-header {
           display: flex;
@@ -333,4 +470,3 @@ export const History: React.FC<HistoryProps> = ({ onEdit }) => {
         </div>
     );
 };
-

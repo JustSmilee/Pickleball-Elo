@@ -35,6 +35,17 @@ export interface TeamRoster {
   memberIds: string[];
 }
 
+export interface WeeklyTeamPerformance {
+  played: number;
+  wins: number;
+  losses: number;
+  ptsFor: number;
+  ptsAgainst: number;
+  scoreDiff: number;
+  isWeeklyWinner: boolean;
+  bonus: number;
+}
+
 export interface TeamMinigameStats {
   teamId: string;
   teamName: string;
@@ -51,6 +62,7 @@ export interface TeamMinigameStats {
   weeklyBonus: number; // +2 per week won
   totalPoints: number; // matchPoints + weeklyBonus
   weeklyWins: Record<number, number>; // week number (1,2,3) -> count of wins against matchup opponent
+  weeklyStats?: Record<number, WeeklyTeamPerformance>;
 }
 
 
